@@ -1,0 +1,45 @@
+\documentclass[a4paper,12pt]{report}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{setspace}
+\usepackage[paper=a4paper,margin=1in]{geometry}
+\usepackage{float}
+
+\usepackage[backend=biber, sorting=none]{biblatex}
+
+\usepackage{listings}
+\usepackage{pacchetti/protobuf/lang}  % include language definition for protobuf
+\usepackage{pacchetti/protobuf/style} % include custom style for proto declarations.
+
+\addbibresource{bibliography.bib}
+\addbibresource{web.bib}
+
+\begin{document}
+
+\include{fronte}
+
+\begin{flushright}
+	\textit{ma rompi tutto! \\
+            hai rotto l'elettricità \\
+            ora è un casino}
+\end{flushright}
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\include{capitoli/introduzione}
+\include{capitoli/strumenti}
+\include{capitoli/hardware}
+\include{capitoli/sviluppo}
+\include{capitoli/conclusioni}
+
+\newpage
+\printbibheading[heading=bibintoc, title={Riferimenti}]
+\printbibliography[nottype=online,heading=subbibintoc,title={Bibliografia}]
+\printbibliography[type=online,heading=subbibintoc,title={Siti}]
+
+\end{document}
