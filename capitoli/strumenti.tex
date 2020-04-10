@@ -12,8 +12,8 @@ Gli elementi principali che costituiscono il sistema sono:
   \item \textbf{Messaggi}: il contenuto che si scambiano i nodi. I messaggi possono essere sia di tipo standard sia definiti in modo custom.
   \item \textbf{Topic}: sono il canale di comunicazione usato dai nodi per permettere lo scambio di messaggi.
 \end{itemize}
-Il sistema di scambio dei messaggi si basa sull'architettura publisher/subscriber: ogni nodo può essere \textit{talker} (Publisher) o s \textit{listener}  (Subscriber).
-I nodi talker creano il topic e pubblicano i messaggi su questo canale, mentre i nodi subscriber si sottoscrivono al topic e viene eseguita una callback ogni volta che viene ricevuto un messaggio. Più nodi subscriber si possono sottoscrivere allo stesso topic.
+Il sistema di scambio dei messaggi si basa sull'architettura publisher/subscriber: ogni nodo può essere \textit{talker} (Publisher) o \textit{listener}  (Subscriber).
+Un nodo talker può creare topic e pubblicare i messaggi su questi canali (sia su topic creati dal nodo steso, sia su topic già esistenti), mentre un nodo listener si sottoscrive ai topic ed esegue una callback ogni volta che viene ricevuto un messaggio. Più nodi listener si possono sottoscrivere allo stesso topic e più nodi talker possono pubblicare sullo stesso topic.
 
 \begin{figure}[H]
 \centering
@@ -33,7 +33,7 @@ RVIZ è un tool che permette la visualizzazione 3D dei messaggi scambiati da ROS
 \end{figure}
 
 \section{STM32CubeIDE}
-STM32CubeIDE è un ambiente di sviluppo viluppato dalla ST Microelectronics per la programmazione e il debugging delle schede STM32. Il software è scaricabile gratuitamente dal sito ufficiale\cite{STM32CubeIDE}. \\
+STM32CubeIDE è un ambiente di sviluppo della ST Microelectronics per la programmazione e il debugging delle schede STM32. Il software è scaricabile gratuitamente dal sito ufficiale \cite{STM32CubeIDE}. \\
 Le sue principali caratteristiche sono:
 \begin{itemize}
     \item Toolchain GNU C/C++ per Arm e GDB debugger.
@@ -50,11 +50,11 @@ Le sue principali caratteristiche sono:
 \begin{figure}[H]
 \centering
 \includegraphics[scale=0.25]{images/stm32cubemx.png}
-\caption{Cofigurazione di pinout e periferiche tramite lo strumento STM32CubeMX}
+\caption{Configurazione di pinout e periferiche tramite lo strumento STM32CubeMX}
 \end{figure}
 
 \section{Protocol Buffers}
-Protocol Buffers è un metodo di serializzazione dei dati strutturati, utile per lo sviluppo di software che necessita uno scambio di informazioni tra sistemi indipendenti.
+Protocol Buffers è una libreria per la serializzazione dei dati strutturati, utile per lo sviluppo di software che necessita uno scambio di informazioni tra sistemi indipendenti.
 La struttura dei dati viene descritta in un file di tipo \textit{.proto}, dopo di che, attraverso la compilazione con il comando \textit{protoc} e specificando il linguaggio di programmazione desiderato, vengono generate le classi per accedere ai dati. \\
 
 \lstinputlisting[language=protobuf2, 
@@ -67,7 +67,7 @@ Per questo progetto è stata utilizzata anche un'implementazione in C pensata pe
 
 \section{sigrok Pulseview}
 sigrok è una suite di software per l'analisi dei segnali, sfruttando dispositivi come oscilloscopi e analizzatori logici. \\
-Pulseview è l'interfaccia grafica usata per sfrutttare questi tool e permette di interfacciarsi con i dispositivi sopracitati visualizzando il segnale in tempo reale, analizzandone i tempi e consente inoltre la decodifica di segnali digitali.
+Pulseview è l'interfaccia grafica usata per sfruttare questi tool e permette di interfacciarsi con i dispositivi sopracitati visualizzando il segnale in tempo reale, analizzandone i tempi e consente inoltre la decodifica di segnali digitali. \\
 In particolare per questo progetto è stato usato Pulseview con un analizzatore logico per facilitare il debugging nella trasmissione dei segnali, ad esempio la trasmissione seriale di messaggi.
 
 \begin{figure}[H]

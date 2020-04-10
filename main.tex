@@ -1,5 +1,6 @@
 \documentclass[a4paper,12pt]{report}
 \usepackage{graphicx}
+\usepackage{subfigure}
 \usepackage{hyperref}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -41,5 +42,8 @@
 \printbibheading[heading=bibintoc, title={Riferimenti}]
 \printbibliography[nottype=online,heading=subbibintoc,title={Bibliografia}]
 \printbibliography[type=online,heading=subbibintoc,title={Siti}]
+
+\appendix
+\include{capitoli/lista-parti}
 
 \end{document}
