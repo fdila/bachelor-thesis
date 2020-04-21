@@ -100,10 +100,10 @@ Inoltre è presente un debugger integrato ST-LINK V2.1.
 \section{Modulo FTDI}
 Per quanto riguarda la comunicazione tra microcontrollore e computer si è scelto il protocollo UART. 
 Per rendere il sistema utilizzabile collegando un qualsiasi computer è stato necessario un modulo apposito che convertisse il segnale UART in un segnale USB, così da non dover utilizzare una piattaforma apposita dotata di GPIO. \\
-È stato utilizzato un modulo FTDI FT232RL in quanto ampiamente supportato a livello di driver Linux e perché, oltre alle linee di trasmissione e ricezione, presenta alcuni meccanismi di controllo del flusso hardware tramite appositi pin (CTS e RTS) e un pin per poter effettuare il reset del microcontrollore direttamente dal PC.
+È stato utilizzato un modulo FTDI FT232RL in quanto ampiamente supportato a livello di driver Linux e perché, oltre alle linee di trasmissione e ricezione, presenta alcuni meccanismi di controllo del flusso hardware tramite appositi pin (CTS e RTS) e un pin per poter effettuare il reset del microcontrollore direttamente dal PC. \\
 
 \begin{figure}[H]
 \centering
-\includegraphics[scale=0.2]{images/ftdi.jpg}
-\caption{Modulo FT232RL.}
+\includegraphics[scale=0.65]{images/Infrastruttura.png}
+\caption{Riepilogo generale dei componenti e delle loro connessioni.}
 \end{figure}
