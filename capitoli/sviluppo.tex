@@ -14,7 +14,7 @@ Lo stack di navigazione è molto semplice a livello concettuale. Esso riceve le 
 
 \begin{figure}[h]
     \centering
-    \includegraphics[scale=0.38]{images/navigation_stack.png}
+    \includegraphics[width=\textwidth]{images/navigation_stack.png}
     \caption{Lo schema dello stack di navigazione. Come mostrato nella legenda, i nodi in
 bianco sono quelli già forniti, quelli in grigio sono opzionali e quelli in blu sono specifici per il singolo robot che devono essere implementati.}
   \label{fig:navigation_stack}
@@ -22,48 +22,362 @@ bianco sono quelli già forniti, quelli in grigio sono opzionali e quelli in blu
 
 \newpage
 Come illustrato nella figura \ref{fig:navigation_stack} i messaggi da pubblicare, per quanto riguarda il sistema di controllo, sono messaggi di tipo \textit{nav\_msgs/Odometry} sul topic \textit{/odom} e i messaggi di tipo \textit{tf/Message} sul topic \textit{/tf}, e bisogna sottoscriversi ai messaggi di tipo \textit{geometry\_msgs/Twist} sul topic \textit{/cmd\_vel}. \\
-Il messaggio \textit{Odometry} contiene le informazioni riguardanti la pose del robot nello spazio, prendendo come sistema di riferimento la prima posizione del robot ed è composto da:
+Il messaggio \textit{Odometry} contiene le informazioni riguardanti la pose del robot nello spazio, prendendo come sistema di riferimento la prima pose del robot, ed è composto da:
 \begin{itemize}
     \item Posizione espressa come \textit{x, y, z}
     \item Orientamento espresso come \textit{quaternion}
     \item Velocità lineare e velocità angolare attuali
 \end{itemize}
-Il messaggio \textit{tf} contiene le informazioni riguardanti pose del robot ed è necessario in quanto ci permette di rappresentare l'albero delle trasformazioni delle varie parti del robot, ovvero le posizioni relative delle varie parti come laser e altri sensori rispetto alla base mobile, chiamata \textit{base\_link} \\
+
+Il messaggio \textit{tf} contiene le informazioni riguardanti la pose del robot ed è necessario in quanto ci permette di rappresentare l'albero delle trasformazioni delle varie parti del robot, ovvero le posizioni relative delle varie parti come laser e altri sensori rispetto alla base mobile, chiamata \textit{base\_link}.
+
 Il messaggio \textit{geometry\_msgs/Twist} contiene le informazioni per far muovere il robot, nel caso di un robot a guida differenziale queste informazioni sono la velocità lineare sull'asse delle x, e la velocità angolare rispetto all'asse delle z.
 
 Si è scelto di far gestire la parte relativa allo scambio dei messaggi ROS al computer principale, che comunica con la scheda di controllo tramite il modulo usb-seriale. 
-Sono stati creati due nodi ROS, uno che si sottoscrive al topic \textit{/cmd\_vel} e trasmette i comandi alla scheda, e un nodo che riceve le informazioni relative alla velocità del robot, le elabora e pubblica i messaggi su \textit{/odom} e \textit{/tf}. \\
+È stato creato un nodo ROS, che si sottoscrive al topic \textit{/cmd\_vel} e trasmette i comandi alla scheda, e che riceve le informazioni relative alla velocità del robot, le elabora e pubblica i messaggi su \textit{/odom} e \textit{/tf}.
+
 Il microcontrollore deve svolgere tre compiti: 
 \begin{itemize}
+    \item Inviare i dati di odometria.
     \item Gestire i loop di controllo PID per la gestione dei motori.
     \item Ricevere i comandi, ricavare i valori delle velocità dei motori e impostare quindi i setpoint dei controlli PID.
-    \item Inviare i dati di odometria.
 \end{itemize}
 
 La trasmissione dei dati di odometria avviene periodicamente leggendo i dati degli encoder, mentre l'aggiornamento dei comandi da far eseguire ai motori avviene in modo asincrono ogni volta che il messaggio di comando viene ricevuto.
 
-\section{Implementazione microcontrollore}
-\subsection{Struttura del codice}
-Lo scheletro del codice e l'inizializzazione delle periferiche sono stati generati tramite allo strumento STM32CubeMX. Il software è stato scritto in C++ per permettere un miglior riutilizzo del codice attraverso l'utilizzo delle classi.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[scale=0.64]{images/uml_classes.pdf}
-    \caption{Diagramma delle classi}
-\end{figure}
-
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[scale=0.7]{images/uml_activities.pdf}
+    \includegraphics[scale=0.83]{images/uml_activities.pdf}
     \caption{Diagramma delle attività}
 \end{figure}
+\newpage
 
+\section{Implementazione microcontrollore}
+\subsection{Struttura del codice}
+Lo scheletro del codice e l'inizializzazione delle periferiche sono stati generati tramite lo strumento STM32CubeMX. 
+Il software è stato scritto in C++ piuttosto che in C per permettere un miglior riutilizzo del codice attraverso l'utilizzo delle classi. In particolare sono state create 4 classi: una per la gestione degli encoder, una per la gestione del ponte H, una per l'odometria e una per il controllo PID.
 
+Il sistema di controllo è basato sugli interrupt: per la gestione dei task periodici, ovvero l'invio dei dati di odometria e il controllo PID dei motori, sono stati usati due timer che generano un interrupt a frequenza fissa, mentre per la ricezione dei comandi dal computer è usato un approccio asincrono: alla ricezione di ogni comando viene lanciato un interrupt. Sono inoltre presenti degli interrupt per la gestione dei guasti dei motori.
 
-\subsection{Lettura encoder}
+Innanzitutto spieghiamo il funzionamento degli interrupt nell'architettura Cortex-M7 da noi utilizzata.
+Gli interrupt sono dei particolari tipi di eccezione, e vengono generati dalle periferiche o dal software in modo asincrono rispetto all'esecuzione del codice.
+Un'eccezione può trovarsi in 4 stati:
+\begin{itemize}
+    \item Inattiva: eccezione non attiva e non in sospeso.
+    \item In sospeso (\textit{pending}): eccezione in attesa di essere servita dal processore. Una interrupt request da una periferica può far passare la sua corrispondente eccezione in questo stato. 
+    \item Attiva: eccezione che è attualmente servita dal processore ma non è completa.
+    \item Attiva e in sospeso: l'eccezione è attualmente servita dal processore, ed è stata generata un'altra eccezione dalla stessa fonte. 
+\end{itemize}
+Il processore gestisce gli interrupt attraverso Interrupt Service Routines (ISRs): gli indirizzi in memoria di queste ISR sono contenuti nella \textit{vector table}. Nelle librerie di Hardware Abstraction Layer utilizzate all'interno di ogni ISR viene chiamata una funzione di callback, il cui codice è definibile dal programmatore.
+Ad ogni eccezione è associato un livello di priorità: il livello 0 è il livello con priorità massima, il livello di priorità di ogni eccezione è configurabile, tranne per le eccezioni di sistema la cui priorità è fissata a 0.
+Se due eccezioni sono in stato pending, verrà servita prima quella con priorità più alta.
+Se durante la ISR di un'eccezione viene rilevata un'eccezione con priorità più alta, la ISR dell'eccezione attualmente gestita viene messa in attesa (pre-empted) e viene gestita l'eccezione con priorità più alta.
+
+In particolare la configurazione degli interrupt è effettuata da una particolare periferica, il Nested Vectored Interrupt Controller (NVIC). Attraverso il NVIC è possibile configurare la priorità degli interrupt con un meccanismo aggiuntivo, ovvero dividendo il livello di priorità in \textit{group priority} e in \textit{subpriority}. 
+La \textit{group priority} determina il livello di priorità degli interrupt, permettendo di applicare il meccanismo \textit{pre-emptive} illustrato sopra. Se durante la gestione di un interrupt viene rilevato un interrupt con la stessa group priority non viene applicata la pre-emption.
+Se più interrupt in sospeso hanno la stessa group priority, la subpriority determina l'ordine nel quale verranno processati.
+
+Sono stati impostati i livelli di group priority e subpriority per garantire il corretto funzionamento del sistema. In particolare il rilevamento di malfunzionamenti dei motori ha priorità massima, segue l'interrupt associato alla ricezione dei messaggi e infine TIM3 e TIM6 hanno la stessa priorità in quanto utilizzano risorse condivise, avendo la stessa priorità non c'è pre-emption e quindi non ci sono criticità legate alla sincronizzazione dei task.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\hline
+\textbf{Interrupt} & \textbf{Group priority} & \textbf{Subpriority} \\ \hline
+EXTI[9:5]          & 0                       & 0                    \\ \hline
+USART6             & 1                       & 0                    \\ \hline
+TIM3               & 2                       & 1                    \\ \hline
+TIM6               & 2                       & 2                    \\ \hline
+\end{tabular}
+\end{table}
+
+Per utilizzare un timer per la generazione periodica di interrupt lo si imposta come \textit{time base generator}. Ogni timer è collegato tramite un bus ad un clock, la frequenza di questo clock può poi essere divisa da un prescaler, il cui valore è specificato nel registro TIMx\_PSC. Il timer in questa modalità incrementa di 1 il suo registro TIMx\_CNT ad ogni pulsazione del clock diviso dal prescaler; quando il valore nel registro TIMx\_CNT è uguale al valore registro TIMx\_ARR il valore di TIMx\_CNT viene azzerato e viene generato un interrupt \cite{STM32_timer_cookbook}.
+Si può calcolare la frequenza alla quale viene generato l'interrupt con la seguente formula:
+\begin{displaymath}
+Interrupt frequency = \frac{TIMx\_CLOCK}{(TIMx\_PSC + 1)*(TIMx\_ARR + 1)}
+\end{displaymath}
+In particolare è stato usato il timer TIM6 per la generazione dell'interrupt periodico per l'invio dei dati a 10Hz e il timer TIM3 per la generazione dell'interrupt per il controllo PID a 100Hz.
+
+\begin{displaymath}
+TIM6 \; interrupt frequency = \frac{16 MHz}{(9999 + 1)*(159 + 1)} = 10 Hz
+\end{displaymath}
+
+\begin{displaymath}
+TIM3 \; interrupt frequency = \frac{16 MHz}{(999 + 1)*(159 + 1)} = 100 Hz
+\end{displaymath}
+
+Nella callback dell'interrupt generato dal TIM6 vengono letti gli encoder, vengono calcolati i dati dell'odometria e si inviano questi dati al computer tramite la periferica di comunicazione seriale USART6.
+Nella callback dell'interrupt generato dal TIM3 vengono letti gli encoder e si aggiornano i comandi dati al motor driver in base ai valori calcolati attraverso i loop di controllo PID.
+
+Per quanto riguarda la ricezione dei messaggi viene usata la periferica USART6 in modalità DMA, che permette alla CPU di proseguire nell'esecuzione di altro codice mentre la periferica resta in ascolto. In questo modo si può impostare la periferica per generare un interrupt dopo che viene ricevuto un numero arbitrario di byte, specificato nel programma.
+
+Inoltre sono stati attivati gli interrupt relativi alla gestione dei fault del motor driver: i GPIO PA6 e PE9 sono collegati ai pin relativi ai fault sul modulo Pololu, e hanno normalmente tensione alta (5V). Quando su uno dei due pin viene rilevata una tensione bassa (0V) significa che è stato rilevato un guasto, quindi si attiva un interrupt, legati alla periferica EXTI, e nella sua callback viene frenato il sistema e viene inviato un messaggio relativo al guasto al computer.
+
+\subsection{Lettura encoder e calcolo velocità}
+
+\subsubsection{Elettronica encoder}
+
+Per la lettura degli encoder sono stati usati due timer a 32 bit, TIM5 per l'encoder destro e TIM2 per l'encoder sinistro, in \textit{encoder mode}.
+In questa modalità possiamo collegare i due output degli encoder ai canali 1 e 2 del timer, e in modo automatico il registro TIMx\_CNT verrà incrementato o decrementato a seconda della direzione nella quale sta girando l'encoder: se il fronte di salita del segnale A precede il fronte di salita del segnale B il registro viene incrementato, viceversa viene decrementato. È stata scelta la risoluzione X4, ovvero il registro CNT viene incrementato (o decrementato, a seconda della direzione in cui sta girando l'encoder) su ogni fronte di salita e discesa di entrambi i canali, per avere una maggiore risoluzione e permettere un buon controllo anche a basse velocità.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/x4_encoder.png}
+    \caption{Encoder in quadratura con risoluzione X4}
+    \label{fig:x4_encoder}
+\end{figure}
+
+La risoluzione degli encoder è di 500 pulsazioni al giro, e sappiamo che al motore è collegata una riduzione 1:74, quindi possiamo ricavare quanti tick corrispondano ad un giro della ruota:
+
+\begin{displaymath}
+TicksPerGiro = Pulsazioni Encoder * Risoluzione Encoder * Riduzione = 148000
+\end{displaymath}
+
+Misurando la circonferenza delle ruote abbiamo tutti i dati necessari per calcolare la velocità per ogni ruota in m/s.
+
+\subsubsection{Calcolo velocità}
+
+È stata creata una classe per leggere gli encoder e calcolare la velocità delle ruote, nella quale sono memorizzati il puntatore alla periferica timer, il numero di tick per giro di ruota, la circonferenza delle ruote, i tick letti, i millisecondi passati dall'ultima lettura e i millisecondi passati al momento della lettura corrente.
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[scale=0.80]{images/encoder_class.pdf}
+    \caption{Diagramma UML della classe Encoder}
+    \label{fig:encoder_class}
+\end{figure}
+
+Innanzitutto occorre effettuare la configurazione del timer all'inizio del programma, avviando la periferica e impostando il valore registro CNT a metà del valore massimo in modo che, quando si va a leggere il valore del registro, si possa distinguere se l'encoder stia girando in senso orario o antiorario. Si memorizzano inoltre i millisecondi passati dall'inizio del programma.
+
+Attraverso la funzione GetCount() andiamo a leggere il valore del registro CNT, e lo sottraiamo dalla metà del valore massimo che può assumere il registro: in questo modo se il valore ritornato è positivo sappiamo che la ruota sta girando in senso orario, se il valore è negativo sappiamo che la ruota sta girando in senso antiorario. Ad ogni lettura andiamo a resettare il valore di CNT alla metà del suo valore massimo attraverso la funzione ResetCount().
+Chiamando la funzione UpdateValues() andiamo leggere e resettare il valore di CNT, e aggiorniamo i valori dei millisecondi passati dall'ultima chiamata alla funzione e i millisecondi correnti.
+Per calcolare la distanza percorsa attraverso la funzione GetMeters() moltiplichiamo il numero di tick letti per circonferenza della ruota e dividiamo il tutto per il numero di tick per giro di ruota: in questo modo otteniamo i metri percorsi.
+La funzione GetLinearVelocity() chiama le funzioni precedentemente definite, calcola la differenza tra il numero di millisecondi trascorsi tra la lettura in corso e la lettura precedente e quindi calcola la velocità in metri al secondo dividendo i metri percorsi per il numero di secondi passati dall'ultima lettura e otteniamo la velocità attuale della ruota in m/s.
+
 \subsection{Controllo PID dei motori}
+
+\subsubsection{Gestione motor driver}
+%TODO spiegazione ponte H
+I motori sono gestiti attraverso un controllo PID
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[scale=0.80]{images/motorcontroller_class.pdf}
+    \caption{Diagramma UML della classe Encoder}
+    \label{fig:motorcontroller_class}
+\end{figure}
+
+
+\subsubsection{Controllo PID}
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[scale=0.80]{images/pid_class.pdf}
+    \caption{Diagramma UML della classe Encoder}
+    \label{fig:pid_class}
+\end{figure}
+
+
 \cite{cross_pid}
+
+%TODO aspetto marchese per la spiegazione del PID?
+
+
 \subsection{Comunicazione seriale con computer}
-\section{Implementazione nodi ROS}
+
+%Spiegazione UART e DMA
+
+\subsubsection{Periferica UART}
+La comunicazione con il computer di controllo è effettuata tramite la periferica UART (Universal Asynchronous Receiver-Transmitter). In particolare viene usata la periferica USART6 con la seguente configurazione:
+
+\begin{itemize}
+    \item Baud Rate: 9600 bit/s
+    \item Word Length: 8 bit
+    \item Parity: None
+    \item Stop Bits: 1 bit
+    \item Hardware Flow Control: RTS only
+\end{itemize}
+
+Descriviamo il protocollo UART. Se non si stanno inviando dati il livello del segnale è tenuto alto, quando si trasmette un data frame si inizia la comunicazione con uno start bit, ovvero un bit uguale a zero (livello del segnale basso). Successivamente si inviano i bit contenenti l'informazione da trasmettere, nel nostro caso 8 bit. La trasmissione del data frame si conclude con uno stop bit, ovvero un bit uguale a 1. Essendo UART un protocollo asincrono, ovvero senza un clock, il ricevente usa start bit e stop bit per poter effettuare il sampling del segnale, sapendo che $durata\_bit = 1/baud rate$
+
+L'Hardware Flow Control permette di controllare il flusso di dati via hardware. Nello specifico abbiamo la modalità RTS (Request To Send) only: ciò significa che sulla scheda Nucleo ci sarà un pin a cui viene attribuita la funzione di RTS, e questo pin verrà poi collegato all'input CTS (Clear To Send) del modulo seriale. Il pin RTS viene automaticamente settato al livello logico alto se la periferica UART è pronta a ricevere dati, in caso contrario il pin è settato al livello logico basso. In questo modo il computer che sta inviando dati all'UART può inviare i dati solo quando la scheda Nucleo è pronta a riceverli.
+
+La comunicazione nel nostro caso è full-duplex, ovvero abbiamo linee separate per la ricezione e la trasmissione di dati.
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=\textwidth]{images/uart_protocol.png}
+    \caption{Segnale UART, visualizzato tramite un analizzatore logico con il software Pulseview}
+    \label{fig:uart_protocol}
+\end{figure}
+
+\subsubsection{Periferica DMA}
+Come modalità di input/output si è scelto l'accesso diretto alla memoria grazie alla periferica DMA.
+Il DMA permette di trasferire dati in background, senza l'intervento del processore. Durante questi trasferimenti la CPU è libera di proseguire l'esecuzione del programma, alla fine del trasferimento viene generato un interrupt dal DMA per segnalare alla CPU che l'operazione è terminata.
+Il DMA controller presenta più stream, ed ogni stream ha collegati più canali. Ogni canale corrisponde ad una specifica periferica, che viene selezionata in fase di configurazione.
+Nel nostro caso vengono usati due stream, uno per la ricezione dei dati dall'UART e uno per l'invio dei dati dall'UART.
+
+Usiamo la periferica DMA2 in quanto è quella collegata ad USART6 e usiamo due stream, uno per la ricezione e uno per la trasmissione.
+
+\begin{listing}[ht]
+\inputminted[frame=single,framesep=10pt]{c}{codice/dma2_rx_config.c}
+\caption{Configurazione dello stream di ricezione}
+\label{listing:DMA_rx_config}
+\end{listing}
+
+In questo modo stiamo settando lo stream 1, dicendo di usare il canale 5 ovvero il canale collegato a USART6\_RX. La direzione PERIPH\_TO\_MEMORY indica che il DMA trasferirà i dati dalla periferica alla memoria: abbiamo che il DMA trasferirà i dati dal registro della periferica USART contenente il byte ricevuto ad un buffer in memoria. Il parametro DMA\_MINC\_ENABLE fa si che l'indirizzo del buffer in memoria viene incrementato automaticamente dal DMA. 
+La modalità è circolare, in modo da poter gestire la ricezione continua dei dati: se si arriva alla fine del buffer in memoria si ricomincia dall'inizio.
+
+Configurazione dello stream per la trasmissione:
+
+\begin{listing}[ht]
+\inputminted[frame=single,framesep=10pt]{c}{codice/dma2_tx_config.c}
+\caption{Configurazione dello stream di trasmissione}
+\label{listing:DMA_tx_config}
+\end{listing}
+
+In questo modo stiamo settando lo stream 1, dicendo di usare il canale 5 ovvero il canale collegato a USART6\_TX. La direzione MEMORY\_TO\_PERIPH indica che il DMA trasferirà i dati dalla memoria alla periferica: abbiamo che il DMA trasferirà i dati dal buffer di trasmissione in memoria al registro della periferica USART contenente il byte da inviare. Il parametro DMA\_MINC\_ENABLE fa si che l'indirizzo del buffer in memoria viene incrementato automaticamente dal DMA. 
+
+In entrambe le configurazioni la priorità è impostata a LOW: avere la stessa priorità significa che nel caso avvengano due richieste del DMA contemporaneamente verrà prima gestita quella dello stream con numero minore, in questo caso lo stream 1.
+
+
+%Spiegazione nanopb
+\subsubsection{Serializzazione dati}
+Per la trasmissione e la ricezione dei dati si è scelto di usare il protocollo di serializzazione Protocol Buffers. In questo modo viene garantita l'indipendenza da piattaforme e linguaggi specifici per quanto riguarda il lato computer: non si è infatti legati ad una specifica rappresentazione dei bit 
+in quanto i dati vengono serializzati e la libreria è disponibile per diversi linguaggi di programmazione. Nello specifico sul microcontrollore è stato utilizzato nanopb, un'implementazione specifica per i microcontrollori a 32 bit e per i sistemi con memoria limitata.
+
+Innanzitutto è necessario specificare la struttura dei messaggi in un file di tipo .proto, utilizzando la sintassi specifica di Protocol Buffer che è indipendente da linguaggi specifici. Sono stati definiti due messaggi: StatusMessage per l'invio di dati dal robot al computer, e VelocityCommand per l'invio dei comandi di velocità dal computer al robot.
+
+StatusMessage contiene velocità lineare e velocità angolari correnti, i millisecondi passati dal precedente invio del messaggio e un codice di status.
+
+VelocityCommand contiene la velocità lineare e la velocità angolare da raggiungere.
+
+\begin{listing}[ht]
+\lstinputlisting[language=protobuf2, 
+                style=protobuf,
+                captionpos=b]{codice/otto_communication.proto}
+\caption{Definizione dei messaggi con Protocol Buffers}
+\label{listing:protobuf_definition}
+\end{listing}
+
+
+Dopo aver definito la struttura dei messaggi nel file .proto bisogna generare i file da includere nel codice del microcontrollore: tramite uno script python vengono generati i file .pb.h e .pb.c, contenenti le struct che rappresentano i messaggi. Oltre ai file generati dal .proto è necessario includere i file generali per codifica e decodifica che contengono i metodi per effettuare serializzazione e deserializzazione degli stream di dati.
+
+\subsubsection{Invio dati}
+%Invio dati
+L'invio dei dati è effettuato ad una frequenza costante come precedentemente spiegato: il timer TIM6 genera un interrupt a frequenza 10Hz, nella callback di questo interrupt gestiamo l'invio dei dati.
+
+Nella callback vengono lette le velocità delle ruote, e vengono calcolate velocità lineare e velocità angolare con la funzione FromWheelToOdom(float left\_wheel\_velocity, float right\_wheel\_velocity) della classe Odometry, che prende in input le due velocità delle ruote. Vengono letti i millisecondi trascorsi dall'avvio, da cui sottraiamo i millisecondi trascorsi dall'avvio letti all'invio del messaggio precedente, così da avere i millisecondi trascorsi dall'ultimo invio. Impostiamo inoltre il campo \textit{status} uguale a 3, corrispondente allo stato \textit{running}.
+Possiamo quindi procedere alla serializzazione del messaggio attraverso la funzione pb\_encode e avviare la trasmissione UART in modalità DMA dello stream ottenuto dalla serializzazione tramite la funzione delle librerie di hardware abstraction layer HAL\_UART\_Transmit\_DMA.
+
+Inviamo il messaggio StatusMessage anche nel caso vengano rilevati dei fault dei motori, nella callback dell'interrupt ad essi legata: in questo caso il codice di status sarà 4 o 5 a seconda del fault rilevato.
+
+
+\begin{listing}[ht]
+\inputminted[frame=single,framesep=10pt]{cpp}{codice/dma_tx_code.cpp}
+\caption{Codice per la trasmissione dei dati di odometria}
+\label{listing:trasmissione_dati}
+\end{listing}
+
+
+\subsubsection{Ricezione comandi}
+La ricezione dei comandi è sempre gestita in modalità DMA: all'inizio del programma, dopo aver configurato tutte le periferiche si configura la periferica UART per ricevere un numero di byte corrispondente alla lunghezza del messaggio VelocityCommand attraveso la funzione HAL\_UART\_Receive\_DMA. In questo modo quando viene ricevuto quel numero di byte la periferica genera un interrupt a cui corrisponde la callback HAL\_UART\_RxCpltCallback.
+In questa callback ci occupiamo di decodificare i byte ricevuti: nel caso la decodifica abbia successo significa che i byte sono stati inviati e ricevuti correttamente e possiamo quindi procedere all'elaborazione del comando ricevuto, nel caso la decodifica fallisca scartiamo il messaggio.
+Quando riceviamo correttamente un messaggio procediamo a ricavare da velocità lineare e angolare i setpoint per la velocità delle ruote con la funzione FromCmdVelToSetpoint(). Impostiamo quindi i setpoint dei PID delle singole ruote e il setpoint del PID che gestisce la differenza tra la velocità delle ruote.
+Reimpostiamo infine la periferica per generare l'interrupt con la funzione HAL\_UART\_Receive\_DMA.
+
+
+\begin{listing}[ht]
+\inputminted[frame=single,framesep=10pt]{cpp}{codice/dma_rx_code.cpp}
+\caption{Codice relativo alla ricezione dei comandi}
+\label{listing:ricezione_dati}
+\end{listing}
+
+
+\section{Implementazione nodo ROS sul computer}
+Per quanto riguarda la gestione da parte del computer di controllo è stato scritto il nodo ROS \textit{serial\_bridge} in python che si occupa di:
+
+\begin{itemize}
+    \item Ricevere i messaggi dal robot.
+    \item Calcolare l'odometria e pubblicare i messaggi ad essa relativi.
+    \item Trasmettere i comandi di velocità al robot.
+\end{itemize}
+
+\subsubsection{Codice python}
+Innanzitutto il nodo resta in attesa di poter aprire la porta seriale. Quando la porta seriale è disponibile viene aperta, e viene effettuato il reset della scheda Nucleo tramite il pin DTR del modulo seriale, che è collegato al pin NRST della scheda Nucleo.
+
+Dopo l'apertura della porta seriale il nodo si sottoscrive al topic \textit{/cmd\_vel} e crea il publisher per i topic \textit{/odom} e \textit{tf}.
+
+Il nodo resta quindi in attesa di ricevere dati dalla porta seriale, in particolare aspetta di ricevere un numero di byte pari alla lunghezza del messaggio \textit{otto\_status}. Quando questi byte vengono ricevuti si procede con la decodifica del messaggio: nel caso in cui lo status del messaggio sia 3 (ovvero \textit{running}) si procede con il calcolo dell'odometria e la pubblicazione dei messaggi ROS ad essa relativi, nel caso lo status sia 4 o 5 (quindi è stato rilevato un malfunzionamento) viene pubblicato un messaggio di errore).
+
+Ogni volta che viene ricevuto un messaggio sul topic \textit{/cmd\_vel} viene effettuata una callback, nella quale il messaggio ricevuto viene serializzato attraverso la libreria Protocol Buffers. Viene poi controllato lo stato del pin CTS, ovvero si controlla se la scheda Nucleo sia pronta a ricevere un messaggio: in caso positivo viene inviato il messaggio serializzato, altrimenti viene pubblicato un messaggio di warning.
+
+Quando il nodo riceve un segnale di shutdown prima di terminare procede al reset della scheda Nucleo tramite il pin DTR per questioni di sicurezza.
+
+\subsubsection{Calcolo odometria}
+A partire dalla velocità lineare e la velocità angolare trasmesse dal robot è possibile ricavare una stima della sua pose a partire dalla sua pose precedente: questo metodo è chiamato \textit{dead reckoning}.
+Usiamo un sistema in cui ci sono 3 gradi di libertà, ovvero stimiamo le pose sul piano. La pose sarà quindi descritta come $[x,y,\theta]^T$
+Si prende come sistema di riferimento la prima pose del robot, quindi si parte dalla pose $[0,0,0]^T$.
+
+Le seguenti formule, relative al calcolo della pose di un robot a guida differenziale, vengono applicate ogni volta che si riceve un messaggio per calcolare la nuova pose.
+
+Indichiamo con $\omega$ la velocità angolare, con $V$ la velocità lineare, con $\delta t$ i secondi passati, con $[x,y,\theta]^T$ la pose attuale e con $[x',y',\theta']^T$ la nuova pose calcolata.
+
+Abbiamo due casi: il caso in cui il robot sta andando dritto e il caso in cui sta percorrendo una curva.
+
+Nel primo caso il robot sta percorrendo una linea dritta, quindi possiamo semplicemente sommare i metri percorsi alla pose precedente, tenendo conto dell'orientamento rispetto al mondo.
+
+%caso dritto
+\begin{displaymath}
+    \begin{bmatrix} x' \\ y' \\ \theta'  \end{bmatrix}
+    =
+    \begin{bmatrix} 
+        x+\cos(\theta)\cdot(V\cdot\delta t) \\ 
+        y+\sin(\theta)\cdot(V\cdot\delta t) \\ 
+        \theta  
+    \end{bmatrix}
+\end{displaymath}
+
+Nel secondo caso il robot sta percorrendo un arco della circonferenza che ha centro in ICC (centro di rotazione istantanea) e raggio R. A partire da velocità lineare e angolare possiamo ricavare il raggio e la posizione dell'ICC. Avendo a disposizione l'ICC calcoliamo la nuova pose traslando il robot in ICC, ruotiamo di $\delta \theta$ e infine ri-trasliamo al punto di partenza.
+
+%ICC
+\begin{displaymath}
+    \begin{bmatrix}
+        ICC_x \\
+        ICC_y \\
+    \end{bmatrix}
+    =
+    \begin{bmatrix}
+        x - R \cdot \sin(\theta) \\
+        y + R \cdot \cos(\theta) \\
+    \end{bmatrix} \\
+    \quad con \quad
+    R = \frac{V}{\omega}
+\end{displaymath}
+
+%matrici finali
+\begin{displaymath}
+    \begin{bmatrix} x' \\ y' \\ \theta'  \end{bmatrix}
+    =
+    \begin{bmatrix}
+        \cos(\omega \cdot \delta t) & -\sin(\omega \cdot \delta t) & 0 \\
+        \sin(\omega \cdot \delta t) & \cos(\omega \cdot \delta t) & 0 \\
+        0 & 0 & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+        x - ICC_x \\
+        y - ICC_y \\
+        \theta
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+        ICC_x \\
+        ICC_y \\
+        \omega \cdot \delta t
+   \end{bmatrix}
+\end{displaymath}
+
 \section{Testing}
+Il robot è stato testato.
+%invio comandi joypad
+%check odometria con rviz
