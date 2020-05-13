@@ -1,0 +1,25 @@
+syntax = "proto2";
+
+// Message sent from ST board to the computer
+message StatusMessage {
+  required float linear_velocity = 1;
+  required float angular_velocity = 2;
+  required fixed32 delta_millis = 3;
+  /*
+    Status code meanings:
+    0 = UNKNOWN
+    1 = WAITING_CONFIG
+    2 = READY
+    3 = RUNNING
+    4 = H_BRIDGE_FAULT_1
+    5 = H_BRIDGE_FAULT_2
+    6 = UNKNOWN_ERROR
+  */
+  required fixed32 status = 4;
+}
+
+// Message sent from the computer to ST board
+message VelocityCommand {
+  required float linear_velocity = 1;
+  required float angular_velocity = 2;
+}
