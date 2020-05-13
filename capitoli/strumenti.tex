@@ -3,7 +3,8 @@
 \section{ROS}
 
 ROS (Robot Operating System) è un framework flessibile usato per scrivere software per robot.
-È una collezione di strumenti, librerie e convenzioni che ha lo scopo di semplificare la creazione di sistemi robot complessi e robusti in modo indipendente dalla piattaforma robotica. \\
+È una collezione di strumenti, librerie e convenzioni che ha lo scopo di semplificare la creazione di sistemi robot complessi e robusti in modo indipendente dalla piattaforma robotica.
+
 ROS è costituito da una rete di processi che vengono eseguiti in parallelo e comunicano tra di loro in modo Peer-to-Peer.
 Gli elementi principali che costituiscono il sistema sono:
 \begin{itemize}
@@ -49,13 +50,14 @@ Le sue principali caratteristiche sono:
 
 \begin{figure}[H]
 \centering
-\includegraphics[scale=0.25]{images/stm32cubemx.png}
+\includegraphics[width=\textwidth]{images/stm32cubemx.png}
 \caption{Configurazione di pinout e periferiche tramite lo strumento STM32CubeMX}
 \end{figure}
 
 \section{Protocol Buffers}
 Protocol Buffers è una libreria per la serializzazione dei dati strutturati, utile per lo sviluppo di software che necessita uno scambio di informazioni tra sistemi indipendenti.
-La struttura dei dati viene descritta in un file di tipo \textit{.proto}, dopo di che, attraverso la compilazione con il comando \textit{protoc} e specificando il linguaggio di programmazione desiderato, vengono generate le classi per accedere ai dati. \\
+La struttura dei dati viene descritta in un file di tipo \textit{.proto}, dopo di che, attraverso la compilazione con il comando \textit{protoc} e specificando il linguaggio di programmazione desiderato, vengono generate le classi per accedere ai dati. 
+
 
 \lstinputlisting[language=protobuf2, 
                 style=protobuf,
@@ -66,13 +68,15 @@ Protocol Buffers è sviluppato da Google e rilasciato con licenza open source \c
 Per questo progetto è stata utilizzata anche un'implementazione in C pensata per i microcontrollori, \textit{nanopb} \cite{nanopb}.
 
 \section{sigrok Pulseview}
-sigrok è una suite di software per l'analisi dei segnali, sfruttando dispositivi come oscilloscopi e analizzatori logici. \\
-Pulseview è l'interfaccia grafica usata per sfruttare questi tool e permette di interfacciarsi con i dispositivi sopracitati visualizzando il segnale in tempo reale, analizzandone i tempi e consente inoltre la decodifica di segnali digitali. \\
+sigrok è una suite di software per l'analisi dei segnali, sfruttando dispositivi come oscilloscopi e analizzatori logici. 
+
+Pulseview è l'interfaccia grafica usata per sfruttare questi tool e permette di interfacciarsi con i dispositivi sopracitati visualizzando il segnale in tempo reale, analizzandone i tempi e consente inoltre la decodifica di segnali digitali. 
+
 In particolare per questo progetto è stato usato Pulseview con un analizzatore logico per facilitare il debugging nella trasmissione dei segnali, ad esempio la trasmissione seriale di messaggi.
 
 \begin{figure}[H]
 \centering
-\includegraphics[scale=0.25]{images/pulseview.png}
+\includegraphics[width=\textwidth]{images/pulseview.png}
 \caption{Acquisizione e decodifica di un segnale UART}
 \end{figure}
 
