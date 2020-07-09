@@ -4,7 +4,8 @@ Otto è un robot a guida differenziale, progetto di ricerca del laboratorio di r
 
 \section{Base robotica VolksBot RT 3}
 VolksBot è un kit modulare per la costruzione di robot, progettato per il campo della ricerca e della  prototipazione rapida.
-La base robotica è pensata per essere facilmente modificata ed adattata alle proprie esigenze in quanto composta da barre in alluminio combinabili fra di loro. \\
+La base robotica è pensata per essere facilmente modificata ed adattata alle proprie esigenze in quanto composta da barre in alluminio combinabili fra di loro.
+
 Nello specifico la base robotica utilizzata è composta da due ruote motrici frontali e una ruota basculante di supporto posteriore.
 Ciascuna ruota motrice è collegata ad un motore a corrente continua combinato con una riduzione con un rapporto di trasmissione 1:74.
 L'intero sistema robotico è alimentato tramite batterie a bordo del veicolo.
@@ -16,8 +17,9 @@ L'intero sistema robotico è alimentato tramite batterie a bordo del veicolo.
 
 \section{Encoder}
 Un encoder è dispositivo elettromeccanico in grado di convertire la posizione o il moto angolare in un codice digitale.
+
 Nel nostro caso è stato montato un encoder in quadratura sull'asse del motore di ciascuna ruota motrice.
-Questo tipo di sensore è formato da un LED, da una corona circolare con un pattern fisso che si ripete e da dei fotodiodi. \\
+Questo tipo di sensore è formato da un LED, da una corona circolare con un pattern fisso che si ripete e da dei fotodiodi. 
 
 \begin{figure}[H]
 \centering
@@ -30,7 +32,7 @@ Elaborando questi segnali è possibile misurare sia la distanza percorsa dalle r
 
 \begin{figure}[H]
 \hfill
-\subfigure[Schema dell'encoder]{\includegraphics[scale=0.32]{images/encoder-1.png}}
+\subfigure[Schema interno dell'encoder]{\includegraphics[scale=0.32]{images/encoder-1.png}}
 \hfill
 \subfigure[Segnale generato]{\includegraphics[scale=0.47]{images/quad-encoding-waveform-1.png}}
 \hfill
@@ -39,13 +41,15 @@ Elaborando questi segnali è possibile misurare sia la distanza percorsa dalle r
 
 \section{Motor driver}
 Un motor driver è un dispositivo elettronico necessario per poter controllare i motori DC usando i segnali digitali generati da un microcontrollore.
-Il circuito elettronico principale è chiamato ponte H e permette di controllare la polarità della tensione applicata a un carico. Tramite questo meccanismo siamo in grado sia di controllare la direzione del moto di un motore a corrente continua, stabilendo il verso nel quale fluisce la corrente, sia di regolare la velocità del motore modulando la tensione. \\
+Il circuito elettronico principale è chiamato ponte H e permette di controllare la polarità della tensione applicata a un carico. Tramite questo meccanismo siamo in grado sia di controllare la direzione del moto di un motore a corrente continua, stabilendo il verso nel quale fluisce la corrente, sia di regolare la velocità del motore modulando la tensione.
+
 La modulazione della tensione avviene tramite un segnale PWM (pulse-width modulation). Questo segnale periodico ha due fasi: una in cui la tensione è alta (3.3V) e una fase in cui la tensione è bassa (0V). Il rapporto tra queste due fasi è detto duty-cycle e determina la tensione media in uscita.
 
 \begin{figure}[H]
 \centering
-\includegraphics[scale=1.4]{images/pwm.jpg}
+\includegraphics[width=\textwidth]{images/pwm.jpg}
 \caption{Modulazione della tensione con segnale PWM.}
+\label{fig:pwm}
 \end{figure}
 
 
@@ -86,7 +90,7 @@ La scheda ha 512kB di memoria RAM e 2MB di memoria FLASH.
 È stata scelta per la grande disponibilità di periferiche integrate, in particolare per la realizzazione del sistema di controllo sono stati necessari: 
 \begin{itemize}
     \item 2 timer a 32 bit per la gestione degli encoder.
-    \item 1 timer a 16 bit per la generazione del segnale PWM.
+    \item 1 timer a 16 bit per la generazione dei segnali PWM.
     \item 1 periferica UART per la comunicazione con il computer.
 \end{itemize}
 Inoltre è presente un debugger integrato ST-LINK V2.1.
@@ -99,11 +103,13 @@ Inoltre è presente un debugger integrato ST-LINK V2.1.
 
 \section{Modulo FTDI}
 Per quanto riguarda la comunicazione tra microcontrollore e computer si è scelto il protocollo UART. 
-Per rendere il sistema utilizzabile collegando un qualsiasi computer è stato necessario un modulo apposito che convertisse il segnale UART in un segnale USB, così da non dover utilizzare una piattaforma apposita dotata di GPIO. \\
-È stato utilizzato un modulo FTDI FT232RL in quanto ampiamente supportato a livello di driver Linux e perché, oltre alle linee di trasmissione e ricezione, presenta alcuni meccanismi di controllo del flusso hardware tramite appositi pin (CTS e RTS) e un pin per poter effettuare il reset del microcontrollore direttamente dal PC.
+Per rendere il sistema utilizzabile collegando un qualsiasi computer è stato necessario un modulo apposito che convertisse il segnale UART in un segnale USB, così da non dover utilizzare una piattaforma apposita dotata di GPIO.
+
+È stato utilizzato un modulo FTDI FT232RL in quanto ampiamente supportato a livello di driver Linux e perché, oltre alle linee di trasmissione e ricezione, presenta alcuni meccanismi di controllo del flusso hardware tramite appositi pin (CTS e RTS) e un pin (DTR) per poter effettuare il reset del microcontrollore direttamente dal PC.
+
 
 \begin{figure}[H]
 \centering
-\includegraphics[scale=0.2]{images/ftdi.jpg}
-\caption{Modulo FT232RL.}
+\includegraphics[width=\textwidth]{images/infrastruttura.pdf}
+\caption{Riepilogo generale dei componenti e delle loro connessioni.}
 \end{figure}
