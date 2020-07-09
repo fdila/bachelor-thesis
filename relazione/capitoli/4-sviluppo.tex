@@ -5,7 +5,7 @@ L'obiettivo di questo stage è stato la creazione del sistema di controllo di un
 Innanzitutto è stata necessaria un'analisi dei requisiti, nella quale sono stati individuati i seguenti punti: 
 \begin{itemize}
     \item Elaborazione dei dati degli encoder per ricavare l'odometria del robot.
-    \item Controllo dei motori tramite un sistema di retroazione.
+    \item Controllo dei motori tramite un sistema in retroazione.
     \item Comunicazione bidirezionale con un computer di controllo.
 \end{itemize}
 
@@ -43,12 +43,12 @@ Il microcontrollore deve svolgere tre compiti:
     \item Ricevere i comandi, ricavare i valori delle velocità dei motori e impostare quindi i setpoint dei controlli PID.
 \end{itemize}
 
-La trasmissione dei dati di odometria avviene periodicamente leggendo i dati degli encoder, mentre l'aggiornamento dei comandi da far eseguire ai motori avviene in modo asincrono ogni volta che il messaggio di comando viene ricevuto.
+La trasmissione dei dati di odometria avviene periodicamente leggendo i dati degli encoder, mentre l'aggiornamento dei comandi da far eseguire ai motori avviene in modo asincrono ogni volta che un messaggio di comando viene ricevuto.
 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[scale=0.83]{images/uml_activities.pdf}
+    \includegraphics[scale=0.84]{images/uml_activities.pdf}
     \caption{Diagramma delle attività}
 \end{figure}
 \newpage
@@ -56,12 +56,11 @@ La trasmissione dei dati di odometria avviene periodicamente leggendo i dati deg
 \section{Implementazione microcontrollore}
 \subsection{Struttura del codice}
 Lo scheletro del codice e l'inizializzazione delle periferiche sono stati generati tramite lo strumento STM32CubeMX. 
-Il software è stato scritto in C++ piuttosto che in C per permettere un miglior riutilizzo del codice attraverso l'utilizzo delle classi. In particolare sono state create 4 classi: una per la gestione degli encoder, una per la gestione del ponte H, una per l'odometria e una per il controllo PID.
+Il software è stato scritto in C++, piuttosto che in C, per permettere un miglior riutilizzo del codice attraverso l'utilizzo delle classi. In particolare sono state create 4 classi: una per la gestione degli encoder, una per la gestione del ponte H, una per l'odometria e una per il controllo PID.
 
-Il sistema di controllo è basato sugli interrupt: per la gestione dei task periodici, ovvero l'invio dei dati di odometria e il controllo PID dei motori, sono stati usati due timer che generano un interrupt a frequenza fissa, mentre per la ricezione dei comandi dal computer è usato un approccio asincrono: alla ricezione di ogni comando viene lanciato un interrupt. Sono inoltre presenti degli interrupt per la gestione dei guasti dei motori.
+Il sistema di controllo è basato sugli interrupt: per la gestione dei task periodici, ovvero l'invio dei dati di odometria e il controllo PID dei motori, sono stati usati due timer che generano un interrupt a frequenza fissa (rispettivamente 10Hz per l'invio dell'odometria e 100Hz per il controllo PID), mentre per la ricezione dei comandi dal computer è usato un approccio asincrono: alla ricezione di ogni comando viene lanciato un interrupt. Vengono inoltre utilizzati degli interrupt per la gestione dei guasti dei motori.
 
-Innanzitutto spieghiamo il funzionamento degli interrupt nell'architettura Cortex-M7 da noi utilizzata.
-Gli interrupt sono dei particolari tipi di eccezione, e vengono generati dalle periferiche o dal software in modo asincrono rispetto all'esecuzione del codice.
+Gli interrupt sono dei particolari tipi di eccezione, che viene generata dalle periferiche o dal software in modo asincrono rispetto all'esecuzione del codice.
 Un'eccezione può trovarsi in 4 stati:
 \begin{itemize}
     \item Inattiva: eccezione non attiva e non in sospeso.
@@ -70,7 +69,7 @@ Un'eccezione può trovarsi in 4 stati:
     \item Attiva e in sospeso: l'eccezione è attualmente servita dal processore, ed è stata generata un'altra eccezione dalla stessa fonte. 
 \end{itemize}
 Il processore gestisce gli interrupt attraverso Interrupt Service Routines (ISRs): gli indirizzi in memoria di queste ISR sono contenuti nella \textit{vector table}. Nelle librerie di Hardware Abstraction Layer utilizzate all'interno di ogni ISR viene chiamata una funzione di callback, il cui codice è definibile dal programmatore.
-Ad ogni eccezione è associato un livello di priorità: il livello 0 è il livello con priorità massima, il livello di priorità di ogni eccezione è configurabile, tranne per le eccezioni di sistema la cui priorità è fissata a 0.
+Ad ogni eccezione è associato un livello di priorità: il livello 0 è il livello con priorità massima. Il livello di priorità di ogni eccezione è configurabile, tranne per le eccezioni di sistema la cui priorità è fissata a 0.
 Se due eccezioni sono in stato pending, verrà servita prima quella con priorità più alta.
 Se durante la ISR di un'eccezione viene rilevata un'eccezione con priorità più alta, la ISR dell'eccezione attualmente gestita viene messa in attesa (pre-empted) e viene gestita l'eccezione con priorità più alta.
 
@@ -78,7 +77,7 @@ In particolare la configurazione degli interrupt è effettuata da una particolar
 La \textit{group priority} determina il livello di priorità degli interrupt, permettendo di applicare il meccanismo \textit{pre-emptive} illustrato sopra. Se durante la gestione di un interrupt viene rilevato un interrupt con la stessa group priority non viene applicata la pre-emption.
 Se più interrupt in sospeso hanno la stessa group priority, la subpriority determina l'ordine nel quale verranno processati.
 
-Sono stati impostati i livelli di group priority e subpriority per garantire il corretto funzionamento del sistema. In particolare il rilevamento di malfunzionamenti dei motori ha priorità massima, segue l'interrupt associato alla ricezione dei messaggi e infine TIM3 e TIM6 hanno la stessa priorità in quanto utilizzano risorse condivise, avendo la stessa priorità non c'è pre-emption e quindi non ci sono criticità legate alla sincronizzazione dei task.
+Sono stati impostati i livelli di group priority e subpriority per garantire il corretto funzionamento del sistema. In particolare il rilevamento di malfunzionamenti dei motori ha priorità massima, segue l'interrupt associato alla ricezione dei messaggi e infine TIM3 e TIM6 hanno la stessa priorità in quanto utilizzano risorse condivise, avendo la stessa priorità non c'è pre-emption e quindi non ci sono criticità legate alla sincronizzazione dei task. I task a priorità diverse non accedono alle stesse risorse, quindi non ci sono problemi legati alla preemption tra task con livelli di priorità diverse.
 
 \begin{table}[H]
 \centering
@@ -97,7 +96,7 @@ Si può calcolare la frequenza alla quale viene generato l'interrupt con la segu
 \begin{displaymath}
 Interrupt frequency = \frac{TIMx\_CLOCK}{(TIMx\_PSC + 1)*(TIMx\_ARR + 1)}
 \end{displaymath}
-In particolare è stato usato il timer TIM6 per la generazione dell'interrupt periodico per l'invio dei dati a 10Hz e il timer TIM3 per la generazione dell'interrupt per il controllo PID a 100Hz.
+In particolare, è stato usato il timer TIM6 per la generazione dell'interrupt periodico per l'invio dei dati a 10Hz e il timer TIM3 per la generazione dell'interrupt per il controllo PID a 100Hz.
 
 \begin{displaymath}
 TIM6 \; interrupt frequency = \frac{16 MHz}{(9999 + 1)*(159 + 1)} = 10 Hz
@@ -107,10 +106,10 @@ TIM6 \; interrupt frequency = \frac{16 MHz}{(9999 + 1)*(159 + 1)} = 10 Hz
 TIM3 \; interrupt frequency = \frac{16 MHz}{(999 + 1)*(159 + 1)} = 100 Hz
 \end{displaymath}
 
-Nella callback dell'interrupt generato dal TIM6 vengono letti gli encoder, vengono calcolati i dati dell'odometria e si inviano questi dati al computer tramite la periferica di comunicazione seriale USART6.
+Nella callback dell'interrupt generato dal TIM6 vengono letti gli encoder, viene calcolata l'odometria e si invia il risultato al computer tramite la periferica di comunicazione seriale USART6.
 Nella callback dell'interrupt generato dal TIM3 vengono letti gli encoder e si aggiornano i comandi dati al motor driver in base ai valori calcolati attraverso i loop di controllo PID.
 
-Per quanto riguarda la ricezione dei messaggi viene usata la periferica USART6 in modalità DMA, che permette alla CPU di proseguire nell'esecuzione di altro codice mentre la periferica resta in ascolto. In questo modo si può impostare la periferica per generare un interrupt dopo che viene ricevuto un numero arbitrario di byte, specificato nel programma.
+Per quanto riguarda la ricezione dei messaggi viene usata la periferica USART6 in modalità DMA, che permette alla CPU di proseguire nell'esecuzione di altro codice mentre la periferica esegue le operazioni di I/O. In questo modo si può impostare la periferica per generare un interrupt dopo che viene ricevuto un numero arbitrario di byte, specificato nel programma.
 
 Inoltre sono stati attivati gli interrupt relativi alla gestione dei fault del motor driver: i GPIO PA6 e PE9 sono collegati ai pin relativi ai fault sul modulo Pololu, e hanno normalmente tensione alta (5V). Quando su uno dei due pin viene rilevata una tensione bassa (0V) significa che è stato rilevato un guasto, quindi si attiva un interrupt, legati alla periferica EXTI, e nella sua callback viene frenato il sistema e viene inviato un messaggio relativo al guasto al computer.
 
@@ -152,40 +151,74 @@ Innanzitutto occorre effettuare la configurazione del timer all'inizio del progr
 Attraverso la funzione GetCount() andiamo a leggere il valore del registro CNT, e lo sottraiamo dalla metà del valore massimo che può assumere il registro: in questo modo se il valore ritornato è positivo sappiamo che la ruota sta girando in senso orario, se il valore è negativo sappiamo che la ruota sta girando in senso antiorario. Ad ogni lettura andiamo a resettare il valore di CNT alla metà del suo valore massimo attraverso la funzione ResetCount().
 Chiamando la funzione UpdateValues() andiamo leggere e resettare il valore di CNT, e aggiorniamo i valori dei millisecondi passati dall'ultima chiamata alla funzione e i millisecondi correnti.
 Per calcolare la distanza percorsa attraverso la funzione GetMeters() moltiplichiamo il numero di tick letti per circonferenza della ruota e dividiamo il tutto per il numero di tick per giro di ruota: in questo modo otteniamo i metri percorsi.
-La funzione GetLinearVelocity() chiama le funzioni precedentemente definite, calcola la differenza tra il numero di millisecondi trascorsi tra la lettura in corso e la lettura precedente e quindi calcola la velocità in metri al secondo dividendo i metri percorsi per il numero di secondi passati dall'ultima lettura e otteniamo la velocità attuale della ruota in m/s.
+La funzione GetLinearVelocity() chiama le funzioni precedentemente definite, calcola la differenza tra il numero di millisecondi trascorsi tra la lettura in corso e la lettura precedente e quindi calcola la velocità in metri al secondo dividendo i metri percorsi per il numero di secondi passati dall'ultima lettura e otteniamo la velocità attuale della ruota in m/s. Questa funzione viene poi usata sia per il calcolo dell'odometria, sia per calcolare l'errore rispetto al setpoint nel loop PID.
 
 \subsection{Controllo PID dei motori}
 
 \subsubsection{Gestione motor driver}
-%TODO spiegazione ponte H
-I motori sono gestiti attraverso un controllo PID
 
-\begin{figure}[htb]
+Per poter controllare i motori tramite un microcontrollore bisogna utilizzare elettronica aggiuntiva, ovvero il motor driver, in quanto il segnale generato dal microcontrollore non è sufficiente per guidare un motore: il microcontrollore non è in grado di erogare tensione e corrente sufficienti.
+Il motor driver è in grado, dati gli adeguati input, di erogare in output tensione e corrente adeguate per guidare il motore.
+
+Il motor driver opera erogando una tensione al motore, la velocità è proporzionale al valore della tensione. Attraverso il segnale digitale PWM si può modulare la tensione, per simulare un segnale analogico, la cui tensione sarà pari a $V_{max}*Duty Cycle$. 
+Si può inoltre controllare la direzione del movimento in base alla polarità della tensione applicata. Nel caso in cui non venga applicata alcuna tensione al motore esso è libero di ruotare.
+
+Per controllare il motor driver è stata usata la modalità \textit{sign-magnitude}, ovvero un segnale PWM è utilizzato per regolare la velocità del motore, mentre un pin di direzione inverte la polarità della tensione (e quindi la direzione nella quale il motore sta girando) a seconda che il segnale sia alto o basso. Per il controllo di ciascun motore sono necessari 3 pin: un pin per la direzione, un pin per il PWM e un pin di sleep, usato nel caso in cui si voglia lasciare libero il motore.
+
+Il segnale PWM (figura \ref{fig:pwm}) è un particolare tipo di segnale caratterizzato da una frequenza e un duty cyle. Per la generazione dei due segnali PWM sono stati utilizzati due canali del timer TIM4.
+La frequenza del timer è stata impostata a 20 kHz come da datasheet, attraverso la seguente configurazione: 
+
+\begin{displaymath}
+TIM4 \; frequency = \frac{16 MHz}{(0 + 1)*(799 + 1)} = 20 kHz
+\end{displaymath}
+
+I canali 3 e 4 del TIM4 sono stati impostati in modalità PWM 1: in questa modalità il registro CNT viene incrmentato a ogni tick del timer e il segnale in uscita del canale x viene mantenuto alto fintanto che il registro CNT < registro CCRx. Per controllare il duty cycle del PWM viene quindi impostato il valore del registro CCRx, che varia tra 0 (duty cycle allo 0\%) e il valore contenuto nel registro ARR (duty cycle al 100\%).
+
+È stata quindi creata la classe MotorController, nella quale sono contenuti i riferimenti ai pin da usare e i metodi per controllare il motore.
+Sono stati scritti i seguenti metodi:
+\begin{itemize}
+    \item SetSpeed(int): imposta il duty cycle del PWM al valore passato in ingresso. Se il valore passato in ingresso è positivo il pin DIR è settato ad alto (motore gira in avanti), se il valore è negativo il pin DIR è settato a basso (motore gira indietro).
+    \item Brake(): imposta il duty cycle del pwm a 0. In questo modo il motore viene frenato.
+    \item Coast(): imposta il pin sleep a basso, scollegando così l'alimentazione al motore, in modo da farlo girare liberamente.
+\end{itemize}
+
+\begin{figure}[ht]
     \centering
     \includegraphics[scale=0.80]{images/motorcontroller_class.pdf}
-    \caption{Diagramma UML della classe Encoder}
+    \caption{Diagramma UML della classe MotorController}
     \label{fig:motorcontroller_class}
 \end{figure}
 
-
 \subsubsection{Controllo PID}
 
-\begin{figure}[htb]
+Il controllo effettivo dei motori è gestito tramite loop di controllo PID. 
+Il controllo PID è un sistema con retroazione negativa, ovvero l'output del controllore, che viene dato in input al sistema da controllare, è ottenuto tramite la differenza tra il setpoint (lo stato da raggiungere) e lo stato corrente, stimato attraverso appositi sensori. Questa differenza è chiamata \textit{errore}.
+La sigla PID sta per Proporzionale-Integrale-Derivativo: questo tipo di controllore opera sull'errore attraverso le seguenti parti:
+\begin{itemize}
+    \item Parte \textbf{proporzionale} dove l'errore corrente viene moltiplicato per un gain \textit{kp}
+    \item Parte \textbf{integrale} dove i vari errori vengono accumulati nel tempo, questo valore viene poi moltiplicato per un gain \textit{ki}
+    \item Parte \textbf{derivativa} dove la derivata dell'errore viene moltiplicata per un gain \textit{kd}
+\end{itemize}
+
+Le tre parti ottenute vengono poi sommate, e si ottiene l'output da dare come comando al sistema da controllare. Questo è valido per un sistema a tempo continuo, ma usando un microcontrollore ci troviamo in un sistema a tempo discreto, quindi l'integrale diventa la sommatoria di tutti i valori campionati dell'errore e la derivata diventa la differenza tra l'errore corrente e l'ultimo errore campionato.
+
+Il controllo PID deve avvenire ad una frequenza costante, per questo motivo è stato sfruttato il timer TIM6 per generare un interrupt periodico a 100 Hz, nella cui callback opera il sistema di controllo.
+
+È stato adottato un sistema di controllo cross-coupling \cite{cross_pid}: in questo sistema abbiamo due loop di controllo indipendenti per il motore destro e il motore sinistro, e un loop di controllo aggiuntivo che opera sulla differenza tra le velocità dei due motori. I controllori sui singoli motori sono, come tutti i controllori, soggetti a errori e non permettono di raggiungere perfettamente i setpoint: la direzione di movimento del robot varia in base alla differenza di velocità tra i due motori, per questo motivo senza un controllo incrociato il robot potrebbe curvare più o meno di quanto si desidera. Con il controllo cross-coupling è possibile minimizzare l'errore più significativo, ovvero l'errore di orientamento del robot.
+Il setpoint del sistema cross-coupling è la differenza voluta tra la velocità delle ruote, ad esempio se si vuole che il robot proceda dritto la differenza voluta tra le velocità sarà 0. Come in ogni controllore PID viene calcolato l'errore tra il setpoint e la misura corrente dello stato, e viene calcolato l'output come precedentemente spiegato. L'output del controllore cross-coupling viene poi sommato all'output del controllore del motore destro e sottratto dall'output del controllore del motore sinistro. I due output destro e sinistro così ottenuti vengono poi mandati in input al ponte H.
+
+Dopo la progettazione del sistema segue la fase di calibrazione dei PID, in cui bisogna trovare le costanti di guadagno \textit{kp, ki, kd} di ogni sistema di controllo. Non avendo a disposizione il modello matematico dei sistemi da controllare non è stato possibile un approccio analitico, si è quindi usato un metodo empirico.
+
+È stato scritto un apposito script python per il tuning: all'avvio dello script vengono chiesti in input qual è il controllore che si vuole calibrare (destro, sinistro o cross-coupling), il setpoint desiderato e le tre costanti kp, ki, kd. Questi parametri vengono inviati al microcontrollore che imposta i parametri del PID scelto. Alla pressione di un bottone presente sulla scheda viene avviato il controllore PID e vengono periodicamente inviati i dati degli encoder al computer. In questo modo è possibile monitorare l'andamento dello stato del sistema e farne un plot. Le costanti di guadagno vengono impostate in modo tale da poter raggiungere velocemente il setpoint, ma allo stesso tempo non superarlo troppo, e ritornare velocemente al setpoint anche in presenza di disturbi. 
+
+\begin{figure}[H]
     \centering
-    \includegraphics[scale=0.80]{images/pid_class.pdf}
-    \caption{Diagramma UML della classe Encoder}
-    \label{fig:pid_class}
+    \includegraphics[width=\textwidth]{images/pid_plot.png}
+    \caption{Plot della risposta al gradino del sistema}
+    \label{fig:pid}
 \end{figure}
 
-
-\cite{cross_pid}
-
-%TODO aspetto marchese per la spiegazione del PID?
-
-
 \subsection{Comunicazione seriale con computer}
-
-%Spiegazione UART e DMA
 
 \subsubsection{Periferica UART}
 La comunicazione con il computer di controllo è effettuata tramite la periferica UART (Universal Asynchronous Receiver-Transmitter). In particolare viene usata la periferica USART6 con la seguente configurazione:
@@ -200,7 +233,7 @@ La comunicazione con il computer di controllo è effettuata tramite la periferic
 
 Descriviamo il protocollo UART. Se non si stanno inviando dati il livello del segnale è tenuto alto, quando si trasmette un data frame si inizia la comunicazione con uno start bit, ovvero un bit uguale a zero (livello del segnale basso). Successivamente si inviano i bit contenenti l'informazione da trasmettere, nel nostro caso 8 bit. La trasmissione del data frame si conclude con uno stop bit, ovvero un bit uguale a 1. Essendo UART un protocollo asincrono, ovvero senza un clock, il ricevente usa start bit e stop bit per poter effettuare il sampling del segnale, sapendo che $durata\_bit = 1/baud rate$
 
-L'Hardware Flow Control permette di controllare il flusso di dati via hardware. Nello specifico abbiamo la modalità RTS (Request To Send) only: ciò significa che sulla scheda Nucleo ci sarà un pin a cui viene attribuita la funzione di RTS, e questo pin verrà poi collegato all'input CTS (Clear To Send) del modulo seriale. Il pin RTS viene automaticamente settato al livello logico alto se la periferica UART è pronta a ricevere dati, in caso contrario il pin è settato al livello logico basso. In questo modo il computer che sta inviando dati all'UART può inviare i dati solo quando la scheda Nucleo è pronta a riceverli.
+L'Hardware Flow Control permette di controllare il flusso di dati via hardware. Nello specifico abbiamo la modalità RTS (Request To Send) only: ciò significa che sulla scheda Nucleo ci sarà un pin di output a cui viene attribuita la funzione di RTS, e questo pin verrà poi collegato all'input CTS (Clear To Send) del modulo seriale. Il pin RTS viene automaticamente settato al livello logico alto se la periferica UART della scheda Nucleo è pronta a ricevere dati, in caso contrario il pin è settato al livello logico basso. In questo modo il computer che sta inviando dati all'UART può inviare i dati solo quando la scheda Nucleo è pronta a riceverli.
 
 La comunicazione nel nostro caso è full-duplex, ovvero abbiamo linee separate per la ricezione e la trasmissione di dati.
 
@@ -228,23 +261,19 @@ Usiamo la periferica DMA2 in quanto è quella collegata ad USART6 e usiamo due s
 In questo modo stiamo settando lo stream 1, dicendo di usare il canale 5 ovvero il canale collegato a USART6\_RX. La direzione PERIPH\_TO\_MEMORY indica che il DMA trasferirà i dati dalla periferica alla memoria: abbiamo che il DMA trasferirà i dati dal registro della periferica USART contenente il byte ricevuto ad un buffer in memoria. Il parametro DMA\_MINC\_ENABLE fa si che l'indirizzo del buffer in memoria viene incrementato automaticamente dal DMA. 
 La modalità è circolare, in modo da poter gestire la ricezione continua dei dati: se si arriva alla fine del buffer in memoria si ricomincia dall'inizio.
 
-Configurazione dello stream per la trasmissione:
-
 \begin{listing}[ht]
 \inputminted[frame=single,framesep=10pt]{c}{codice/dma2_tx_config.c}
 \caption{Configurazione dello stream di trasmissione}
 \label{listing:DMA_tx_config}
 \end{listing}
 
-In questo modo stiamo settando lo stream 1, dicendo di usare il canale 5 ovvero il canale collegato a USART6\_TX. La direzione MEMORY\_TO\_PERIPH indica che il DMA trasferirà i dati dalla memoria alla periferica: abbiamo che il DMA trasferirà i dati dal buffer di trasmissione in memoria al registro della periferica USART contenente il byte da inviare. Il parametro DMA\_MINC\_ENABLE fa si che l'indirizzo del buffer in memoria viene incrementato automaticamente dal DMA. 
+In questo modo stiamo settando lo stream 6, dicendo di usare il canale 5 ovvero il canale collegato a USART6\_TX. La direzione MEMORY\_TO\_PERIPH indica che il DMA trasferirà i dati dalla memoria alla periferica: abbiamo che il DMA trasferirà i dati dal buffer di trasmissione in memoria al registro della periferica USART contenente il byte da inviare. Il parametro DMA\_MINC\_ENABLE fa si che l'indirizzo del buffer in memoria viene incrementato automaticamente dal DMA. 
 
 In entrambe le configurazioni la priorità è impostata a LOW: avere la stessa priorità significa che nel caso avvengano due richieste del DMA contemporaneamente verrà prima gestita quella dello stream con numero minore, in questo caso lo stream 1.
 
-
-%Spiegazione nanopb
 \subsubsection{Serializzazione dati}
 Per la trasmissione e la ricezione dei dati si è scelto di usare il protocollo di serializzazione Protocol Buffers. In questo modo viene garantita l'indipendenza da piattaforme e linguaggi specifici per quanto riguarda il lato computer: non si è infatti legati ad una specifica rappresentazione dei bit 
-in quanto i dati vengono serializzati e la libreria è disponibile per diversi linguaggi di programmazione. Nello specifico sul microcontrollore è stato utilizzato nanopb, un'implementazione specifica per i microcontrollori a 32 bit e per i sistemi con memoria limitata.
+in quanto i dati vengono serializzati e la libreria è disponibile per diversi linguaggi di programmazione. Nello specifico sul microcontrollore è stato utilizzato \textit{nanopb}, un'implementazione specifica per i microcontrollori a 32 bit e per i sistemi con memoria limitata.
 
 Innanzitutto è necessario specificare la struttura dei messaggi in un file di tipo .proto, utilizzando la sintassi specifica di Protocol Buffer che è indipendente da linguaggi specifici. Sono stati definiti due messaggi: StatusMessage per l'invio di dati dal robot al computer, e VelocityCommand per l'invio dei comandi di velocità dal computer al robot.
 
@@ -252,7 +281,7 @@ StatusMessage contiene velocità lineare e velocità angolari correnti, i millis
 
 VelocityCommand contiene la velocità lineare e la velocità angolare da raggiungere.
 
-\begin{listing}[ht]
+\begin{listing}[H]
 \lstinputlisting[language=protobuf2, 
                 style=protobuf,
                 captionpos=b]{codice/otto_communication.proto}
@@ -264,7 +293,6 @@ VelocityCommand contiene la velocità lineare e la velocità angolare da raggiun
 Dopo aver definito la struttura dei messaggi nel file .proto bisogna generare i file da includere nel codice del microcontrollore: tramite uno script python vengono generati i file .pb.h e .pb.c, contenenti le struct che rappresentano i messaggi. Oltre ai file generati dal .proto è necessario includere i file generali per codifica e decodifica che contengono i metodi per effettuare serializzazione e deserializzazione degli stream di dati.
 
 \subsubsection{Invio dati}
-%Invio dati
 L'invio dei dati è effettuato ad una frequenza costante come precedentemente spiegato: il timer TIM6 genera un interrupt a frequenza 10Hz, nella callback di questo interrupt gestiamo l'invio dei dati.
 
 Nella callback vengono lette le velocità delle ruote, e vengono calcolate velocità lineare e velocità angolare con la funzione FromWheelToOdom(float left\_wheel\_velocity, float right\_wheel\_velocity) della classe Odometry, che prende in input le due velocità delle ruote. Vengono letti i millisecondi trascorsi dall'avvio, da cui sottraiamo i millisecondi trascorsi dall'avvio letti all'invio del messaggio precedente, così da avere i millisecondi trascorsi dall'ultimo invio. Impostiamo inoltre il campo \textit{status} uguale a 3, corrispondente allo stato \textit{running}.
@@ -273,9 +301,9 @@ Possiamo quindi procedere alla serializzazione del messaggio attraverso la funzi
 Inviamo il messaggio StatusMessage anche nel caso vengano rilevati dei fault dei motori, nella callback dell'interrupt ad essi legata: in questo caso il codice di status sarà 4 o 5 a seconda del fault rilevato.
 
 
-\begin{listing}[ht]
+\begin{listing}[H]
 \inputminted[frame=single,framesep=10pt]{cpp}{codice/dma_tx_code.cpp}
-\caption{Codice per la trasmissione dei dati di odometria}
+\caption{Codice per la trasmissione dell'odometria}
 \label{listing:trasmissione_dati}
 \end{listing}
 
@@ -287,7 +315,7 @@ Quando riceviamo correttamente un messaggio procediamo a ricavare da velocità l
 Reimpostiamo infine la periferica per generare l'interrupt con la funzione HAL\_UART\_Receive\_DMA.
 
 
-\begin{listing}[ht]
+\begin{listing}[H]
 \inputminted[frame=single,framesep=10pt]{cpp}{codice/dma_rx_code.cpp}
 \caption{Codice relativo alla ricezione dei comandi}
 \label{listing:ricezione_dati}
@@ -323,7 +351,7 @@ Le seguenti formule, relative al calcolo della pose di un robot a guida differen
 
 Indichiamo con $\omega$ la velocità angolare, con $V$ la velocità lineare, con $\delta t$ i secondi passati, con $[x,y,\theta]^T$ la pose attuale e con $[x',y',\theta']^T$ la nuova pose calcolata.
 
-Abbiamo due casi: il caso in cui il robot sta andando dritto e il caso in cui sta percorrendo una curva.
+Per semplicità del codice distinguiamo due casi: il caso in cui il robot stia percorrendo una curva con raggio infinito e il caso in cui stia percorrendo una curva con raggio finito.
 
 Nel primo caso il robot sta percorrendo una linea dritta, quindi possiamo semplicemente sommare i metri percorsi alla pose precedente, tenendo conto dell'orientamento rispetto al mondo.
 
@@ -378,6 +406,9 @@ Nel secondo caso il robot sta percorrendo un arco della circonferenza che ha cen
 \end{displaymath}
 
 \section{Testing}
-Il robot è stato testato.
-%invio comandi joypad
-%check odometria con rviz
+Il robot è stato testato in ambiente reale per verificarne il corretto funzionamento.
+
+Innanzitutto è stato scritto un nodo ROS in python, \textit{joypad\_bridge}, che permette di trasmettere messaggi sul topic \textit{/cmd\_vel} tramite un joypad USB collegato al computer: con l'analogico sinistro si controlla la velocità lineare del robot, con l'analogico destro la velocità angolare.
+In questo modo è stata verificata la corretta ricezione dei comandi di velocità da parte del robot e la loro corretta esecuzione.
+
+Sfruttando il nodo \textit{joypad\_bridge} è stato poi possibile effettuare dei test per quanto riguarda l'odometria del robot. Dopo aver confermato la corretta ricezione dei messaggi contenenti i dati di odometria sul computer è stato usato il tool RVIZ per verificare l'accuratezza dei calcoli relativi all'odometria. Il robot è stato guidato attraverso un percorso ad anello (quindi con partenza e arrivo nello stesso punto) di circa 10 metri, che comprendeva curve, rettilinei e giri su sè stesso: sono stati visualizzate le pose ottenute tramite RVIZ, e si è confrontata la pose iniziale con quella finale. È stato misurato un errore di circa 40 centimetri, considerato accettabile in quanto gli encoder non tengono conto degli slittamenti delle ruote (in quanto misurano soltanto i giri del motore) e il calcolo dead reckoning è soggetto all'accumulo degli errori precedenti.
