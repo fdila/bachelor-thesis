@@ -11,8 +11,8 @@ message StatusMessage {
     1 = WAITING_CONFIG
     2 = READY
     3 = RUNNING
-    4 = H_BRIDGE_FAULT_1
-    5 = H_BRIDGE_FAULT_2
+    4 = H_BRIDGE_FAULT1
+    5 = H_BRIDGE_FAULT2
     6 = UNKNOWN_ERROR
   */
   required fixed32 status = 4;

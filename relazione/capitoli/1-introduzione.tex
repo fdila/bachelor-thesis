@@ -1,1 +1,15 @@
 \chapter{Introduzione}
+
+L'obiettivo di questo stage è stato lo sviluppo del sistema di controllo per una base robotica outdoor. Per sistema di controllo intendiamo il software che interagisce con sensori ed attuatori del robot per effettuare il controllo dei motori e ricevere i dati dei sensori ad essi collegati. Oltre al sistema di basso livello è stato inoltre necessario integrare il sistema di controllo sviluppato con il framework ROS (Robot Operating System) per poter scambiare messaggi con un computer, in modo da comunicare ad esso i dati dei sensori e ricevere i comandi per impostare le velocità dei motori.
+
+Il sistema deve rispettare vincoli real-time e garantire stabilità e robustezza del controllo. È inoltre necessario garantire una comunicazione affidabile tra microcontrollore e computer.
+
+Il lavoro è stato articolato nelle seguenti fasi:
+
+\begin{enumerate}
+    \item \textbf{Ricerca e installazione dell'hardware}. La base robotica presente in laboratorio IRA non era completa, in quanto mancavano alcune componenti elettroniche. È stato quindi necessario innanzitutto scegliere e acquistare il nuovo hardware, e procedere con l'installazione a bordo del robot.
+    \item \textbf{Analisi dei requisiti e progettazione}. È stata fatta un'analisi dei requisiti per garantire i vincoli sopraelencati ed è stata effettuata un'adeguata progettazione del software, sia per quanto riguarda il microcontrollore che per il nodo ROS.
+    \item \textbf{Sviluppo software microcontrollore}. È stato sviluppato il software per poter leggere i sensori, controllare i motori ed effettuare la comunicazione con il computer.
+    \item \textbf{Sviluppo nodo ROS}. È stato sviluppato un nodo ROS per poter fare da ponte tra il microcontrollore e il framework ROS
+    \item \textbf{Testing}. Il sistema di controllo è stato testato dal vivo, comandando il robot con un joypad.
+\end{enumerate}

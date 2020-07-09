@@ -1,4 +1,5 @@
-\documentclass[a4paper,12pt]{report}
+\documentclass[a4paper,12pt, oneside]{book}
+
 \usepackage{graphicx}
 \usepackage{subfigure}
 \usepackage{hyperref}
@@ -10,11 +11,20 @@
 \usepackage{svg}
 \usepackage{amsmath}
 
+
+
+% Per Intestazione 
+\usepackage{fancyhdr}
+\setlength{\headheight}{15pt}
+\pagestyle{fancy}
+\fancyhead[LO]{\nouppercase{\leftmark}}
+\fancyhead[RO]{\nouppercase\rightmark}
+
 \usepackage{minted}
-
-
 \usemintedstyle{borland}
 
+\usepackage{csquotes}
+\usepackage[italian]{babel}
 
 \usepackage[backend=biber, sorting=none]{biblatex}
 
@@ -29,22 +39,25 @@
 
 \include{fronte}
 
+\begin{titlepage}
 \begin{flushright}
 	\textit{ma rompi tutto! \\
             hai rotto l'elettricità \\
             ora è un casino}
 \end{flushright}
+
+\end{titlepage}
 \newpage
 
 \tableofcontents
 
 \newpage
 
-\include{capitoli/introduzione}
-\include{capitoli/strumenti}
-\include{capitoli/hardware}
-\include{capitoli/sviluppo}
-\include{capitoli/conclusioni}
+\include{capitoli/1-introduzione}
+\include{capitoli/2-strumenti}
+\include{capitoli/3-hardware}
+\include{capitoli/4-sviluppo}
+\include{capitoli/5-conclusioni}
 
 \newpage
 \printbibheading[heading=bibintoc, title={Riferimenti}]
@@ -52,6 +65,6 @@
 \printbibliography[type=online,heading=subbibintoc,title={Siti}]
 
 \appendix
-\include{capitoli/lista-parti}
+\include{capitoli/A-lista-parti}
 
 \end{document}

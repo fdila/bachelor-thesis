@@ -32,7 +32,7 @@ Elaborando questi segnali è possibile misurare sia la distanza percorsa dalle r
 
 \begin{figure}[H]
 \hfill
-\subfigure[Schema dell'encoder]{\includegraphics[scale=0.32]{images/encoder-1.png}}
+\subfigure[Schema interno dell'encoder]{\includegraphics[scale=0.32]{images/encoder-1.png}}
 \hfill
 \subfigure[Segnale generato]{\includegraphics[scale=0.47]{images/quad-encoding-waveform-1.png}}
 \hfill
@@ -49,6 +49,7 @@ La modulazione della tensione avviene tramite un segnale PWM (pulse-width modula
 \centering
 \includegraphics[width=\textwidth]{images/pwm.jpg}
 \caption{Modulazione della tensione con segnale PWM.}
+\label{fig:pwm}
 \end{figure}
 
 
@@ -89,7 +90,7 @@ La scheda ha 512kB di memoria RAM e 2MB di memoria FLASH.
 È stata scelta per la grande disponibilità di periferiche integrate, in particolare per la realizzazione del sistema di controllo sono stati necessari: 
 \begin{itemize}
     \item 2 timer a 32 bit per la gestione degli encoder.
-    \item 1 timer a 16 bit per la generazione del segnale PWM.
+    \item 1 timer a 16 bit per la generazione dei segnali PWM.
     \item 1 periferica UART per la comunicazione con il computer.
 \end{itemize}
 Inoltre è presente un debugger integrato ST-LINK V2.1.
@@ -104,7 +105,7 @@ Inoltre è presente un debugger integrato ST-LINK V2.1.
 Per quanto riguarda la comunicazione tra microcontrollore e computer si è scelto il protocollo UART. 
 Per rendere il sistema utilizzabile collegando un qualsiasi computer è stato necessario un modulo apposito che convertisse il segnale UART in un segnale USB, così da non dover utilizzare una piattaforma apposita dotata di GPIO.
 
-È stato utilizzato un modulo FTDI FT232RL in quanto ampiamente supportato a livello di driver Linux e perché, oltre alle linee di trasmissione e ricezione, presenta alcuni meccanismi di controllo del flusso hardware tramite appositi pin (CTS e RTS) e un pin per poter effettuare il reset del microcontrollore direttamente dal PC.
+È stato utilizzato un modulo FTDI FT232RL in quanto ampiamente supportato a livello di driver Linux e perché, oltre alle linee di trasmissione e ricezione, presenta alcuni meccanismi di controllo del flusso hardware tramite appositi pin (CTS e RTS) e un pin (DTR) per poter effettuare il reset del microcontrollore direttamente dal PC.
 
 
 \begin{figure}[H]
