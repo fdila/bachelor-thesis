@@ -2,14 +2,14 @@
 
 L’obiettivo di questo lavoro è stato lo studio e lo sviluppo di un sistema di controllo per una base robotica, che possa poi essere utilizzata per la ricerca in ambito di guida autonoma e percezione outdoor.
 
-La base robotica era già presente in laboratorio IRA, tuttavia mancava dei componenti elettronici per poter essere utlizizzabile.
-Innanzitutto è stato quindi necessario fare un'analisi dei requisiti hardware, acqusistare i componenti mancanti e procedere alla loro installazione fisica sulla base robotica.
+La base robotica era già presente in laboratorio IRA, tuttavia mancava dei componenti elettronici per poter essere utilizzabile.
+Innanzitutto è stato quindi necessario fare un'analisi dei requisiti hardware, acquistare i componenti mancanti e procedere alla loro installazione fisica sulla base robotica.
 
 È stato poi sviluppato il software di basso livello per interagire con i sensori e gli attuatori presenti sulla base robotica, in modo da poter controllare i motori e leggere le velocità delle ruote.
 
 Ha avuto grande rilievo lo studio della comunicazione tra il microcontrollore e il computer di controllo, in modo da poter comandare il robot dal computer tramite il framework ROS. Sono stati sviluppati sia la parte di comunicazione a basso livello tra microcontrollore e computer, sia un nodo ROS in python in grado di ricavare l'odometria a partire dai dati degli encoder e di trasmettere comandi di velocità al robot.
 
-Il tutto è stato poi testato usando un joypad collegato al compuer per l'invio dei comandi al robot e visualizzando l'odometria ricavata tramite lo strumento RVIZ. 
+Il tutto è stato poi testato usando un joypad collegato al computer per l'invio dei comandi al robot e visualizzando l'odometria ricavata tramite lo strumento RVIZ. 
 
 Il sistema di controllo si è dimostrato funzionante, e Otto potrà quindi essere utilizzato in futuro, aggiungendo sensori eterocettivi, per esperimenti e ricerca all'interno del laboratorio.
 
