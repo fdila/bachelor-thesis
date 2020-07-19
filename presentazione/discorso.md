@@ -9,7 +9,7 @@ Il titolo della tesi è "sistema di controllo per base robotica outdoor"
 
 In IRALab era presente una base robotica a cui mancavano componenti e che necessitava di un nuovo sistema di controllo.
 
-Lo scopo del mio stage è stato progettare e realizzare un sistema di controllo per questa base robotica, sia dal punto di vista hardware, che dal punto di vista software. Inoltre questo sistema deve comunicare con un computer ed integrarsi con il framework ROS in modo tale da poter utilizzare il robot per la ricerca in laboratorio.
+Lo scopo del mio stage è stato progettare e realizzare un sistema di controllo per questa base robotica, sia dal punto di vista hardware, che dal punto di vista software. Inoltre questo sistema deve comunicare con un computer ed integrarsi con il framework ROS (Robot Operating System) in modo tale da poter utilizzare il robot per la ricerca in laboratorio.
 
 ## 3 (Infrastruttura hardware)
 
@@ -21,7 +21,7 @@ Inizialmente era presente solo lo chassis con motori ed encoder. Come prima cosa
 
 Il tutto è alimentato da batterie a bordo.
 
-- ## 4 (progettazione software microcontrollore)
+## 4 (progettazione software microcontrollore)
 
 Lo sviluppo sul microcontrollore è stato bare-metal, ovvero non è stato utilizzato un sistema operativo
 I task individuati per il corretto funzionamento sono:
