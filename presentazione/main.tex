@@ -1,0 +1,220 @@
+\documentclass{beamer}
+\usetheme[titlepagelogo=img/bicocca,% Logo for the first page
+		  language=italian,
+		  assistantsupervisor=true,
+		  secondlogo=true,
+		  bullet=triangle,
+		  color=red,
+		  pageofpages=di,
+         ]{TorinoTh}
+         
+\usepackage[beamer,customcolors]{hf-tikz}
+\hfsetfillcolor{alerted text.fg!10}
+\hfsetbordercolor{alerted text.fg}
+
+\usepackage{caption}
+
+\titlepagesecondlogo{img/ira.jpg}
+\author{Federica Di Lauro}
+\rel{Prof. Domenico G. Sorrenti}
+\assistantsupervisor{Dott. Simone Fontana}
+\title{Sistema di controllo per base robotica outdoor}
+\ateneo{Università degli studi di Milano-Bicocca}
+\date{24 luglio 2020}
+
+\begin{document}
+
+\titlepageframe % Slide iniziale
+
+\begin{tframe}{Obiettivi}
+
+\begin{columns}
+    \begin{column}{0.5\textwidth}
+    \vspace{-10mm}
+        \begin{itemize}
+            \item Ricerca e installazione hardware mancante
+            \item Progettazione e sviluppo sistema di controllo su microcontrollore
+            \item Comunicazione con un computer e integrazione con il framework ROS
+        \end{itemize}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+        \begin{center}
+
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.9\columnwidth]{img/otto2.png}
+                \caption*{Base robotica Otto}
+            \end{figure}
+
+        \end{center}
+    \end{column}
+\end{columns}
+\end{tframe}
+
+\begin{tframe}{Robot Operating System}
+\begin{itemize}
+    \item Calcolo odometria e pubblicazione sui topic \textit{/odom} e \textit{/tf}
+    \item Sottoscrizione al topic \textit{/cmd\_vel} e trasmissione al microcontrollore
+\end{itemize}
+\vspace{5mm}
+\begin{figure}
+         \centering
+         \includegraphics[width=\columnwidth]{img/overview_tf.png}
+    \end{figure}
+\end{tframe}
+
+\begin{tframe}{Infrastruttura hardware}
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{img/infrastruttura1.pdf}
+\end{center}
+\end{tframe}
+
+
+%\begin{tframe}{Progettazione sistema}
+%\begin{itemize}
+%\item Lato microcontrollore:
+%\begin{itemize}
+%    \item Lettura ed elaborazione dati degli encoder
+%    \item Controllo dei motori tramite un sistema in retroazione
+%    \item Comunicazione bidirezionale con un computer di controllo
+%\end{itemize}
+%\item Lato computer:
+% \begin{itemize}
+%    \item Comunicazione con il microcontrollore
+%    \item Calcolo odometria
+%    \item Integrazione con ROS
+%\end{itemize}
+%\end{itemize}
+%\end{tframe}
+
+\begin{tframe}{Progettazione software microcontrollore}
+Sviluppo bare metal, senza un sistema operativo.
+\begin{itemize}
+    \item Task:
+        \begin{itemize}
+            \item Lettura encoder e invio dati
+            \item Controllo PID dei motori
+            \item Ricezione comandi dal computer
+        \end{itemize}
+    \item Periferiche utilizzate:
+        \begin{itemize}
+            \item Timer per interrupt periodico a 10 Hz
+            \item Timer per interrupt periodico a 100 Hz
+            \item UART con DMA
+            \item 2 timer per lettura encoder e 1 timer per generazione PWM
+        \end{itemize}
+\end{itemize}
+
+\end{tframe}
+
+\begin{tframe}{Lettura encoder}
+\begin{itemize}
+    \item 2 timer in modalità \textit{encoder} per la lettura
+    \item Calcolo di velocità lineare e angolare
+\end{itemize}
+\vspace{3mm}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.85\columnwidth]{img/x4_encoder.png}
+\end{figure}
+
+\end{tframe}
+
+\begin{tframe}{Ponte H}
+Modalità di operazione \textit{sign-magnitude}:
+\begin{itemize}
+    \item Direzione controllata da un pin
+    \item Segnale PWM per controllo velocità
+\end{itemize}
+\vspace{6mm}
+    \begin{figure}
+         \centering
+         \includegraphics[width=0.9\columnwidth]{img/pwm.jpg}
+    \end{figure}
+\end{tframe}
+
+\begin{tframe}{Controllo PID (1)}
+\vspace{10mm}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\columnwidth]{img/pid.png}
+    \caption*{Schema di un controllore PID}
+\end{figure}
+\end{tframe}
+
+\begin{tframe}{Controllo PID (2)}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\columnwidth]{img/crosspid.pdf}
+    \caption*{Schema del sistema di controllo finale}
+\end{figure}
+\end{tframe}
+
+
+\begin{tframe}{Comunicazione}
+
+\begin{block}{Lato microcontrollore}
+\begin{itemize}
+    \item Periferica UART con DMA 
+    \item Libreria \textit{nanopb} 
+\end{itemize}
+\end{block}
+
+\begin{block}{Lato computer}
+\begin{itemize}
+    \item Modulo FTDI
+    \item Libreria \textit{pyserial}
+    \item Libreria \textit{Protocol Buffers}
+\end{itemize}
+\end{block}
+\end{tframe}
+
+\begin{tframe}{Testing e conclusioni}
+
+\begin{itemize}
+    \item Nodo ROS per pubblicare su \textit{/cmd\_vel} attraverso un joypad
+    \item Visualizzazione odometria con RVIZ
+\end{itemize}
+
+\vspace{3mm}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale=0.16]{img/demo.png}
+    \caption*{\href{https://youtu.be/fEhBCXqMYPw}{Link video demo Otto}}
+\end{figure}
+\centering
+\end{tframe}
+
+
+\begin{tframe}
+    \centering
+    \Huge \textsc{Grazie per l'attenzione}
+    
+    \vspace{5mm}
+    
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.4\columnwidth]{img/bicocca.jpg}
+            \end{figure}
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.4\columnwidth]{img/ira.jpg}
+            \end{figure}
+        \end{column}
+    
+        \begin{column}{0.45\textwidth}
+            \begin{center}
+                \begin{figure}
+                    \centering
+                    \includegraphics[scale=0.5]{img/ottofinal.png}
+                \end{figure}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{tframe}
+
+\end{document}
