@@ -12,6 +12,8 @@
 \hfsetfillcolor{alerted text.fg!10}
 \hfsetbordercolor{alerted text.fg}
 
+\usepackage{caption}
+
 \titlepagesecondlogo{img/ira.jpg}
 \author{Federica Di Lauro}
 \rel{Prof. Domenico G. Sorrenti}
@@ -27,49 +29,64 @@
 \begin{tframe}{Obiettivi}
 
 \begin{columns}
-    \begin{column}{0.45\textwidth}
+    \begin{column}{0.5\textwidth}
+    \vspace{-10mm}
         \begin{itemize}
             \item Ricerca e installazione hardware mancante
             \item Progettazione e sviluppo sistema di controllo su microcontrollore
-            \item Integrazione con il framework ROS
+            \item Comunicazione con un computer e integrazione con il framework ROS
         \end{itemize}
     \end{column}
 
-    \begin{column}{0.45\textwidth}
+    \begin{column}{0.48\textwidth}
         \begin{center}
+
             \begin{figure}
                 \centering
                 \includegraphics[width=0.9\columnwidth]{img/otto2.png}
-                \caption{Base robotica Otto}
+                \caption*{Base robotica Otto}
             \end{figure}
+
         \end{center}
     \end{column}
 \end{columns}
 \end{tframe}
 
+\begin{tframe}{Robot Operating System}
+\begin{itemize}
+    \item Calcolo odometria e pubblicazione sui topic \textit{/odom} e \textit{/tf}
+    \item Sottoscrizione al topic \textit{/cmd\_vel} e trasmissione al microcontrollore
+\end{itemize}
+\vspace{5mm}
+\begin{figure}
+         \centering
+         \includegraphics[width=\columnwidth]{img/overview_tf.png}
+    \end{figure}
+\end{tframe}
+
 \begin{tframe}{Infrastruttura hardware}
 \begin{center}
-    \includegraphics[width=0.8\textwidth]{img/infrastruttura.pdf}
+    \includegraphics[width=0.8\textwidth]{img/infrastruttura1.pdf}
 \end{center}
 \end{tframe}
 
-\begin{tframe}{Progettazione sistema}
-\begin{itemize}
-\item Lato microcontrollore:
-\begin{itemize}
-    \item Lettura ed elaborazione dati degli encoder
-    \item Controllo dei motori tramite un sistema in retroazione
-    \item Comunicazione bidirezionale con un computer di controllo
-\end{itemize}
-\item Lato computer:
- \begin{itemize}
-    \item Comunicazione con il microcontrollore
-    \item Calcolo odometria
-    \item Integrazione con ROS
-\end{itemize}
-\end{itemize}
 
-\end{tframe}
+%\begin{tframe}{Progettazione sistema}
+%\begin{itemize}
+%\item Lato microcontrollore:
+%\begin{itemize}
+%    \item Lettura ed elaborazione dati degli encoder
+%    \item Controllo dei motori tramite un sistema in retroazione
+%    \item Comunicazione bidirezionale con un computer di controllo
+%\end{itemize}
+%\item Lato computer:
+% \begin{itemize}
+%    \item Comunicazione con il microcontrollore
+%    \item Calcolo odometria
+%    \item Integrazione con ROS
+%\end{itemize}
+%\end{itemize}
+%\end{tframe}
 
 \begin{tframe}{Progettazione software microcontrollore}
 Sviluppo bare metal, senza un sistema operativo.
@@ -96,9 +113,10 @@ Sviluppo bare metal, senza un sistema operativo.
     \item 2 timer in modalità \textit{encoder} per la lettura
     \item Calcolo di velocità lineare e angolare
 \end{itemize}
+\vspace{3mm}
 \begin{figure}
     \centering
-    \includegraphics[width=0.9\columnwidth]{img/x4_encoder.png}
+    \includegraphics[width=0.85\columnwidth]{img/x4_encoder.png}
 \end{figure}
 
 \end{tframe}
@@ -106,62 +124,50 @@ Sviluppo bare metal, senza un sistema operativo.
 \begin{tframe}{Ponte H}
 Modalità di operazione \textit{sign-magnitude}:
 \begin{itemize}
-    \item Segnale PWM per controllo velocità
     \item Direzione controllata da un pin
+    \item Segnale PWM per controllo velocità
 \end{itemize}
+\vspace{6mm}
     \begin{figure}
          \centering
-         \includegraphics[width=\columnwidth]{img/pwm.jpg}
+         \includegraphics[width=0.9\columnwidth]{img/pwm.jpg}
     \end{figure}
 \end{tframe}
 
-\begin{tframe}{Controllo PID}
-\begin{columns}
-    \begin{column}{0.5\textwidth}
-        \begin{figure}
-                \centering
-                \includegraphics[width=\columnwidth]{img/pid.png}
-                \caption{Schema di un generico controllore PID}
-            \end{figure}
-    \end{column}
+\begin{tframe}{Controllo PID (1)}
+\vspace{10mm}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\columnwidth]{img/pid.png}
+    \caption*{Schema di un controllore PID}
+\end{figure}
+\end{tframe}
 
-    \begin{column}{0.5\textwidth}
-        \begin{center}
-            \begin{figure}
-                \centering
-                \includegraphics[width=\columnwidth]{img/crosspid.pdf}
-                \caption{Schema del sistema di controllo finale}
-            \end{figure}
-        \end{center}
-    \end{column}
-\end{columns}
+\begin{tframe}{Controllo PID (2)}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\columnwidth]{img/crosspid.pdf}
+    \caption*{Schema del sistema di controllo finale}
+\end{figure}
 \end{tframe}
 
 
 \begin{tframe}{Comunicazione}
-Lato microcontrollore:
+
+\begin{block}{Lato microcontrollore}
 \begin{itemize}
-    \item Periferica UART con DMA
-    \item Hardware Flow Control
-    \item Libreria \textit{nanopb}
+    \item Periferica UART con DMA 
+    \item Libreria \textit{nanopb} 
 \end{itemize}
-Lato computer:
+\end{block}
+
+\begin{block}{Lato computer}
 \begin{itemize}
     \item Modulo FTDI
     \item Libreria \textit{pyserial}
     \item Libreria \textit{Protocol Buffers}
 \end{itemize}
-\end{tframe}
-
-\begin{tframe}{Nodo ROS \textit{serial\_bridge.py}}
-\begin{itemize}
-    \item Calcolo odometria e pubblicazione sui topic \textit{/odom} e \textit{/tf}
-    \item Sottoscrizione al topic \textit{/cmd\_vel} e trasmissione a microcontrollore
-\end{itemize}
-\begin{figure}
-         \centering
-         \includegraphics[width=\columnwidth]{img/ros_system.pdf}
-    \end{figure}
+\end{block}
 \end{tframe}
 
 \begin{tframe}{Testing e conclusioni}
@@ -176,9 +182,9 @@ Lato computer:
 \begin{figure}[h]
     \centering
     \includegraphics[scale=0.16]{img/demo.png}
+    \caption*{\href{https://youtu.be/fEhBCXqMYPw}{Link video demo Otto}}
 \end{figure}
 \centering
-{\href{https://youtu.be/fEhBCXqMYPw}{Link video demo Otto}}
 \end{tframe}
 
 
