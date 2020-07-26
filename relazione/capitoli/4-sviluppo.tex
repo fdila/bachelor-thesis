@@ -21,7 +21,7 @@ bianco sono quelli già forniti, quelli in grigio sono opzionali e quelli in blu
 \end{figure}
 
 \newpage
-Come illustrato nella figura \ref{fig:navigation_stack} i messaggi da pubblicare, per quanto riguarda il sistema di controllo, sono messaggi di tipo \textit{nav\_msgs/Odometry} sul topic \textit{/odom} e i messaggi di tipo \textit{tf/Message} sul topic \textit{/tf}, e bisogna sottoscriversi ai messaggi di tipo \textit{geometry\_msgs/Twist} sul topic \textit{/cmd\_vel}. \\
+Come illustrato nella figura \ref{fig:navigation_stack} i messaggi da pubblicare, per quanto riguarda il sistema di controllo, sono messaggi di tipo \textit{nav\_msgs/Odometry} sul topic \textit{/odom} e messaggi di tipo \textit{tf/Message} sul topic \textit{/tf}; bisogna sottoscriversi ai messaggi di tipo \textit{geometry\_msgs/Twist} sul topic \textit{/cmd\_vel}. \\
 Il messaggio \textit{Odometry} contiene le informazioni riguardanti la pose del robot nello spazio, prendendo come sistema di riferimento la prima pose del robot, ed è composto da:
 \begin{itemize}
     \item Posizione espressa come \textit{x, y, z}
@@ -60,7 +60,7 @@ Il software è stato scritto in C++, piuttosto che in C, per permettere un migli
 
 Il sistema di controllo è basato sugli interrupt: per la gestione dei task periodici, ovvero l'invio dei dati di odometria e il controllo PID dei motori, sono stati usati due timer che generano un interrupt a frequenza fissa (rispettivamente 10Hz per l'invio dell'odometria e 100Hz per il controllo PID), mentre per la ricezione dei comandi dal computer è usato un approccio asincrono: alla ricezione di ogni comando viene lanciato un interrupt. Vengono inoltre utilizzati degli interrupt per la gestione dei guasti dei motori.
 
-Gli interrupt sono dei particolari tipi di eccezione, che viene generata dalle periferiche o dal software in modo asincrono rispetto all'esecuzione del codice.
+Un interrupt è un particolare tipo di eccezione, che viene generata dalle periferiche o dal software in modo asincrono rispetto all'esecuzione del codice.
 Un'eccezione può trovarsi in 4 stati:
 \begin{itemize}
     \item Inattiva: eccezione non attiva e non in sospeso.
@@ -213,8 +213,8 @@ Dopo la progettazione del sistema segue la fase di calibrazione dei PID, in cui 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{images/pid_plot.png}
-    \caption{Plot della risposta al gradino del sistema}
+    \includegraphics[width=\textwidth]{images/crosspid.pdf}
+    \caption{Schema a blocchi del sistema}
     \label{fig:pid}
 \end{figure}
 
@@ -252,7 +252,7 @@ Nel nostro caso vengono usati due stream, uno per la ricezione dei dati dall'UAR
 
 Usiamo la periferica DMA2 in quanto è quella collegata ad USART6 e usiamo due stream, uno per la ricezione e uno per la trasmissione.
 
-\begin{listing}[ht]
+\begin{listing}[H]
 \inputminted[frame=single,framesep=10pt]{c}{codice/dma2_rx_config.c}
 \caption{Configurazione dello stream di ricezione}
 \label{listing:DMA_rx_config}
@@ -261,7 +261,7 @@ Usiamo la periferica DMA2 in quanto è quella collegata ad USART6 e usiamo due s
 In questo modo stiamo settando lo stream 1, dicendo di usare il canale 5 ovvero il canale collegato a USART6\_RX. La direzione PERIPH\_TO\_MEMORY indica che il DMA trasferirà i dati dalla periferica alla memoria: abbiamo che il DMA trasferirà i dati dal registro della periferica USART contenente il byte ricevuto ad un buffer in memoria. Il parametro DMA\_MINC\_ENABLE fa si che l'indirizzo del buffer in memoria viene incrementato automaticamente dal DMA. 
 La modalità è circolare, in modo da poter gestire la ricezione continua dei dati: se si arriva alla fine del buffer in memoria si ricomincia dall'inizio.
 
-\begin{listing}[ht]
+\begin{listing}[H]
 \inputminted[frame=single,framesep=10pt]{c}{codice/dma2_tx_config.c}
 \caption{Configurazione dello stream di trasmissione}
 \label{listing:DMA_tx_config}
@@ -275,7 +275,7 @@ In entrambe le configurazioni la priorità è impostata a LOW: avere la stessa p
 Per la trasmissione e la ricezione dei dati si è scelto di usare il protocollo di serializzazione Protocol Buffers. In questo modo viene garantita l'indipendenza da piattaforme e linguaggi specifici per quanto riguarda il lato computer: non si è infatti legati ad una specifica rappresentazione dei bit 
 in quanto i dati vengono serializzati e la libreria è disponibile per diversi linguaggi di programmazione. Nello specifico sul microcontrollore è stato utilizzato \textit{nanopb}, un'implementazione specifica per i microcontrollori a 32 bit e per i sistemi con memoria limitata.
 
-Innanzitutto è necessario specificare la struttura dei messaggi in un file di tipo .proto, utilizzando la sintassi specifica di Protocol Buffer che è indipendente da linguaggi specifici. Sono stati definiti due messaggi: StatusMessage per l'invio di dati dal robot al computer, e VelocityCommand per l'invio dei comandi di velocità dal computer al robot.
+Innanzitutto è necessario specificare la struttura dei messaggi in un file di tipo .proto, utilizzando la sintassi specifica di Protocol Buffer che è indipendente da linguaggi specifici. Sono stati definiti due messaggi: StatusMessage, per l'invio di dati dal robot al computer, e VelocityCommand, per l'invio dei comandi di velocità dal computer al robot.
 
 StatusMessage contiene velocità lineare e velocità angolari correnti, i millisecondi passati dal precedente invio del messaggio e un codice di status.
 
@@ -336,7 +336,7 @@ Innanzitutto il nodo resta in attesa di poter aprire la porta seriale. Quando la
 
 Dopo l'apertura della porta seriale il nodo si sottoscrive al topic \textit{/cmd\_vel} e crea il publisher per i topic \textit{/odom} e \textit{tf}.
 
-Il nodo resta quindi in attesa di ricevere dati dalla porta seriale, in particolare aspetta di ricevere un numero di byte pari alla lunghezza del messaggio \textit{otto\_status}. Quando questi byte vengono ricevuti si procede con la decodifica del messaggio: nel caso in cui lo status del messaggio sia 3 (ovvero \textit{running}) si procede con il calcolo dell'odometria e la pubblicazione dei messaggi ROS ad essa relativi, nel caso lo status sia 4 o 5 (quindi è stato rilevato un malfunzionamento) viene pubblicato un messaggio di errore).
+Il nodo resta quindi in attesa di ricevere dati dalla porta seriale, in particolare aspetta di ricevere un numero di byte pari alla lunghezza del messaggio \textit{otto\_status}. Quando questi byte vengono ricevuti si procede con la decodifica del messaggio: nel caso in cui lo status del messaggio sia 3 (ovvero \textit{running}) si procede con il calcolo dell'odometria e la pubblicazione dei messaggi ROS ad essa relativi, nel caso lo status sia 4 o 5 (quindi è stato rilevato un malfunzionamento) viene pubblicato un messaggio di errore.
 
 Ogni volta che viene ricevuto un messaggio sul topic \textit{/cmd\_vel} viene effettuata una callback, nella quale il messaggio ricevuto viene serializzato attraverso la libreria Protocol Buffers. Viene poi controllato lo stato del pin CTS, ovvero si controlla se la scheda Nucleo sia pronta a ricevere un messaggio: in caso positivo viene inviato il messaggio serializzato, altrimenti viene pubblicato un messaggio di warning.
 
@@ -411,4 +411,4 @@ Il robot è stato testato in ambiente reale per verificarne il corretto funziona
 Innanzitutto è stato scritto un nodo ROS in python, \textit{joypad\_bridge}, che permette di trasmettere messaggi sul topic \textit{/cmd\_vel} tramite un joypad USB collegato al computer: con l'analogico sinistro si controlla la velocità lineare del robot, con l'analogico destro la velocità angolare.
 In questo modo è stata verificata la corretta ricezione dei comandi di velocità da parte del robot e la loro corretta esecuzione.
 
-Sfruttando il nodo \textit{joypad\_bridge} è stato poi possibile effettuare dei test per quanto riguarda l'odometria del robot. Dopo aver confermato la corretta ricezione dei messaggi contenenti i dati di odometria sul computer è stato usato il tool RVIZ per verificare l'accuratezza dei calcoli relativi all'odometria. Il robot è stato guidato attraverso un percorso ad anello (quindi con partenza e arrivo nello stesso punto) di circa 10 metri, che comprendeva curve, rettilinei e giri su sè stesso: sono stati visualizzate le pose ottenute tramite RVIZ, e si è confrontata la pose iniziale con quella finale. È stato misurato un errore di circa 40 centimetri, considerato accettabile in quanto gli encoder non tengono conto degli slittamenti delle ruote (in quanto misurano soltanto i giri del motore) e il calcolo dead reckoning è soggetto all'accumulo degli errori precedenti.
+Sfruttando il nodo \textit{joypad\_bridge} è stato poi possibile effettuare dei test per quanto riguarda l'odometria del robot. Dopo aver confermato la corretta ricezione dei messaggi contenenti i dati di odometria sul computer è stato usato il tool RVIZ per verificare l'accuratezza dei calcoli relativi all'odometria. Il robot è stato guidato attraverso un percorso ad anello (quindi con partenza e arrivo nello stesso punto) di circa 10 metri, che comprendeva curve, rettilinei e giri su sé stesso: sono stati visualizzate le pose ottenute tramite RVIZ, e si è confrontata la pose iniziale con quella finale. È stato misurato un errore di circa 40 centimetri, considerato accettabile in quanto gli encoder non tengono conto degli slittamenti delle ruote (in quanto misurano soltanto i giri del motore) e il calcolo dead reckoning è soggetto all'accumulo degli errori precedenti.
